@@ -1,0 +1,34 @@
+#
+#
+# date: GENERATION_DATE
+# description: This file automatically generated. Do not modify.
+#
+#
+-Xms<XMS_VALUE>
+-Xmx<XMX_VALUE>
+-XX:NewRatio=<RATIO_VALUE>
+-XX:ReservedCodeCacheSize=512m
+-XX:+UseG1GC
+-XX:SoftRefLRUPolicyMSPerMB=50
+-XX:CICompilerCount=2
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:-OmitStackTraceInFastThrow
+-XX:+IgnoreUnrecognizedVMOptions
+-ea
+-Dsun.io.useCanonCaches=false
+-Dsun.java2d.metal=true
+-Djdk.http.auth.tunneling.disabledSchemes=""
+-Djdk.attach.allowAttachSelf=true
+-Djdk.module.illegalAccess.silent=true
+-Dkotlinx.coroutines.debug=off
+-Dsun.tools.attach.tmp.only=true
+#Additional MPS options:
+-client
+-Dfile.encoding=UTF-8
+-Dapple.awt.graphics.UseQuartz=true
+-Dide.mac.message.dialogs.as.sheets=false
+-Didea.invalidate.caches.invalidates.vfs=true
+-Didea.trust.disabled=false
+-Dfreeze.reporter.enabled=false
+-Didea.indices.psi.dependent.default=false
+DEBUGENABLE-agentlib:jdwp=transport=dt_socket,server=y,suspend=SUSPEND,address=DEBUGPORT

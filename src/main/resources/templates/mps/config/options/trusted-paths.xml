@@ -1,0 +1,16 @@
+<application>
+<component name="Trusted.Paths">
+    <option name="TRUSTED_PROJECT_PATHS">
+        <map>
+            <entry key="PATH_TO_TRUST" value="true" />
+        </map>
+    </option>
+</component>
+<component name="Trusted.Paths.Settings">
+    <option name="TRUSTED_PATHS">
+        <list>
+            <option value="PARENT_PATH_TO_TRUST" />
+        </list>
+    </option>
+</component>
+</application>

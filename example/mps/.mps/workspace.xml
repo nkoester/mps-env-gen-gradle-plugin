@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="6153df3f-6654-40e8-afb5-31a45b5df2e6" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../../.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../.idea/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../.idea/gradle.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../.idea/kotlinc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../build.gradle.kts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mps/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mps/.name" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mps/migration.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mps/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mps/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.mps/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage.sandbox/ExampleLanguage.sandbox.msd" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage.sandbox/models/ExampleLanguage.sandbox.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/ExampleLanguage.mpl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/behavior/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/constraints/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/editor/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/structure/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/typesystem/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/classes_gen/ExampleLanguage/generator/templates/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/classes_gen/ExampleLanguage/generator/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/templates/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/templates/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/deps.cp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/Generator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/templates/QueriesGenerated.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/templates/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/templates/ExampleLanguage.generator.templates@generator.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.behavior.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.constraints.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.editor.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.structure.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.typesystem.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/behavior/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/behavior/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/constraints/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/constraints/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/editor/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/editor/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/structure/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/structure/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/typesystem/dependencies" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/typesystem/generated" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/deps.cp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/Language.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/behavior/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/ConstraintsAspectDescriptor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/aspectcps-descriptorclasses.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/checkpoints" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/editor/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/ConceptPresentationAspectImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/LanguageConceptSwitch.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/StructureAspectDescriptor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/aspectcps-descriptorclasses.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/checkpoints" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/TypesystemDescriptor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/aspectcps-descriptorclasses.mps" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/checkpoints" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/trace.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../gradle.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../gradle/libs.versions.toml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../gradlew" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../gradlew.bat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../settings.gradle.kts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../src/main/resources/templates/mps/config/options/trusted-paths.xml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ConsoleHistory">
+    <option name="tabs">
+      <list>
+        <TabState>
+          <option name="title" value="Console" />
+          <tab>
+            <model ref="30896078-f58d-4808-8122-2ffc6de22d53/r:b667db34-4ac6-4337-bdd1-edc87c50b171(TempModule30896078-f58d-4808-8122-2ffc6de22d53/ConsoleModel_123832550646409)">
+              <persistence version="9" />
+              <languages>
+                <devkit ref="70d3d6da-af63-483d-a75f-9c8acf8de332(jetbrains.mps.console.devkit)" />
+              </languages>
+              <imports />
+              <registry>
+                <language id="de1ad86d-6e50-4a02-b306-d4d17f64c375" name="jetbrains.mps.console.base">
+                  <concept id="1583916890557930028" name="jetbrains.mps.console.base.structure.ConsoleRoot" flags="ng" index="aymSD">
+                    <child id="1583916890557930415" name="history" index="aymYE" />
+                    <child id="1583916890557930417" name="commandHolder" index="aymYO" />
+                    <child id="9025248442620242919" name="cursor" index="1PhJh3" />
+                  </concept>
+                  <concept id="5758176878586720817" name="jetbrains.mps.console.base.structure.CommandHolderRef" flags="ng" index="2_V_lH">
+                    <reference id="5758176878586720818" name="target" index="2_V_lI" />
+                  </concept>
+                  <concept id="351968380916615243" name="jetbrains.mps.console.base.structure.CommandHolder" flags="ng" index="2Clz$F" />
+                  <concept id="757553790980850366" name="jetbrains.mps.console.base.structure.History" flags="ng" index="3balQm" />
+                </language>
+              </registry>
+              <node concept="aymSD" id="1JMwsUqDI9s">
+                <node concept="3balQm" id="1JMwsUqDI9t" role="aymYE" />
+                <node concept="2Clz$F" id="1JMwsUqDI9u" role="aymYO" />
+                <node concept="2_V_lH" id="1JMwsUqDI9v" role="1PhJh3">
+                  <ref role="2_V_lI" node="1JMwsUqDI9u" resolve="CommandHolder" />
+                </node>
+              </node>
+            </model>
+          </tab>
+        </TabState>
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="MPSBookmarkManager">
+    <option name="myBookmarkInfos">
+      <array>
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+        <BookmarkInfo />
+      </array>
+    </option>
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="MessagesViewTool">
+    <option name="defaultListState">
+      <MessageListState>
+        <option name="autoscrollToSource" value="true" />
+        <option name="info" value="true" />
+        <option name="warnings" value="true" />
+      </MessageListState>
+    </option>
+  </component>
+  <component name="ProjectId" id="2sweEns9xHhuD5oQTcCJAEkWk0u" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectPluginManager">
+    <option name="pluginsState">
+      <option name="jetbrains.mps.ide.actions.Ide_ProjectPlugin">
+        <value>
+          <PluginState>
+            <option name="myComponentsState">
+              <list>
+                <ComponentState>
+                  <option name="first" value="jetbrains.mps.ide.actions.BehaviorDialogsPersistentOptions_PreferencesComponent" />
+                  <params>
+                    <option name="addReturnsOnImplement" value="false" />
+                    <option name="sortAlphabetically" value="false" />
+                    <option name="removeAttributes" value="true" />
+                  </params>
+                </ComponentState>
+              </list>
+            </option>
+          </PluginState>
+        </value>
+      </option>
+    </option>
+  </component>
+  <component name="ProjectView">
+    <navigator currentView="ProjectPane" proportions="" version="1" />
+    <panes>
+      <pane id="Scope" />
+      <pane id="FileSystem" />
+      <pane id="ProjectPane">
+        <subPane>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="67160e8c-6a22-4574-a93c-427df3624466" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ExampleLanguage" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="r:017dcf3d-7d2d-474e-bc77-66aba853f2e4(ExampleLanguage.sandbox) in IdeaFile[path: /home/nkoester/git/mps/mps-gradle-run-plugin/example/mps/languages/ExampleLanguage.sandbox/models/ExampleLanguage.sandbox.mps]" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="bec5bd5e-19f4-4b9c-8557-74df5de1c0e0(ExampleLanguage)" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="r:854bd2fe-1d3d-486b-9e78-c1025440a6ad(ExampleLanguage.structure) in IdeaFile[path: /home/nkoester/git/mps/mps-gradle-run-plugin/example/mps/languages/ExampleLanguage/models/ExampleLanguage.structure.mps]" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="bec5bd5e-19f4-4b9c-8557-74df5de1c0e0(ExampleLanguage)" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="67160e8c-6a22-4574-a93c-427df3624466" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ExampleLanguage" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="67160e8c-6a22-4574-a93c-427df3624466" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
+          <SELECTED>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="67160e8c-6a22-4574-a93c-427df3624466" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </SELECTED>
+        </subPane>
+      </pane>
+    </panes>
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.idesettings.quicklists&quot;
+  }
+}</component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="6153df3f-6654-40e8-afb5-31a45b5df2e6" name="Changes" comment="" />
+      <created>1739370954835</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1739370954835</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="UsagesViewTool">
+    <version id="1" />
+    <tabs />
+    <default_view_options>
+      <options category_option="false" module_option="true" model_option="true" root_option="true" path_option="false" count_option="true" info_option="true" view_searched_nodes_option="true" group_searched_nodes_option="true" autoscroll_option="false" />
+    </default_view_options>
+  </component>
+</project>

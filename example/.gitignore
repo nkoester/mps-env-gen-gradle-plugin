@@ -15,11 +15,11 @@ build.properties
 tmp/
 mps/build
 
+trace.info
 classes_gen
-mps/**/source_gen
 doc_gen
-source_gen.caches
 source_gen
+source_gen.caches
 test_gen
 test_gen.caches
 TEST-*.xml

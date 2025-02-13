@@ -1,0 +1,40 @@
+[versions]
+jvm = "2.0.21"
+
+# plugins
+mpsGradleCommonPlugin = "1.29.0.1.811916e"
+downloadJBRPlugin = "1.29.0.1.811916e"
+modelcheckPlugin = "1.29.0.1.811916e"
+
+# MPS / JBR
+jbr = "17.0.11-b1207.30"
+mps = "2022.2.4"
+
+# dependencies
+antjunit = "1.10.6"
+mpsExtensions = "2022.2.2988.736f389"
+mbeddr = "2022.2.24917.8ca5b6d"
+iets3Opensource = "2022.2.7739.1a9c338"
+iets3Core = "2022.2.10704.a86ee4e"
+
+
+[plugins]
+jvm-gradle = { id = "jvm", version.ref = "jvm" }
+maven-publish = {id="maven-publish"}
+
+
+mps-gradleCommon = { id = "de.itemis.mps.gradle.common", version.ref = "mpsGradleCommonPlugin" }
+mps-downloadJBR = { id = "download-jbr", version.ref = "downloadJBRPlugin" }
+mps-modelcheck = { id = "modelcheck", version.ref = "modelcheckPlugin" }
+
+
+[libraries]
+mps = {group = "com.jetbrains", name="mps", version.ref="mps"}
+
+#mps-gradlePlugin = { group = "de.itemis.mps", name = "mps-gradle-plugin", version.ref = "mpsGradlePlugin" }
+ant-junit = {group = "org.apache.ant", name="ant-junit", version.ref="antjunit"}
+
+mps-extensions = { group = "de.itemis.mps", name = "extensions", version.ref = "mpsExtensions" }
+mps-mbeddr = { group = "com.mbeddr", name = "mbeddr", version.ref = "mbeddr" }
+mps-iets3-opensource = { group = "org.iets3", name = "opensource", version.ref = "iets3Opensource" }
+mps-iets3-core = { group = "org.iets3", name = "core", version.ref = "iets3Core" }
