@@ -1,0 +1,35 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+.mpsconfig
+.ideaconfig
+
+# Ignore Gradle build output directory
+build
+
+# JetBrains MPS ignores:
+workspace.xml
+junitvmwatcher*.properties
+build.properties
+
+/repositories/
+tmp/
+mps/build
+
+classes_gen
+mps/**/source_gen
+doc_gen
+source_gen.caches
+source_gen
+test_gen
+test_gen.caches
+TEST-*.xml
+junit*.properties
+
+# Temp files
+*.pyc
+*.*~
+*.swp
+~*.doc*
+~*.xls*
+~*.vsd*
+~*.ppt*
