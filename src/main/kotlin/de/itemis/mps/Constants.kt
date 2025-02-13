@@ -17,13 +17,14 @@ object Constants {
     internal const val ENVIRONMENT_LINUX_FILENAME = "environment.env"
     internal const val ENVIRONMENT_LINUX_TEMPLATE_PATH = "/templates/linux/environment.env"
 
-    internal const val MPS_RUN_SCRIPT_LINUX_FILENAME = "startMPS{0}.sh"
+    internal const val MPS_RUN_SCRIPT_LINUX_FILENAME = "startMPS-{0}.sh"
     internal const val MPS_RUN_SCRIPT_LINUX_TEMPLATE_PATH = "/templates/linux/startMPS.sh"
 
     // mac TODO
-    internal const val MPS_RUN_SCRIPT_MAC_FILENAME = "runMPS{0}.sh"
+    internal const val MPS_RUN_SCRIPT_MAC_FILENAME = "startMPS{0}.sh"
+    internal const val MPS_RUN_SCRIPT_MAC_TEMPLATE_PATH = "/templates/mac/startMPS.bat"
 
     // win TODO
-    internal const val MPS_RUN_SCRIPT_WIN_FILENAME = "runMPS{0}.bat"
-
+    internal const val MPS_RUN_SCRIPT_WIN_FILENAME = "startMPS-{0}.bat"
+    internal const val MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH = "/templates/win/startMPS.bat"
 }

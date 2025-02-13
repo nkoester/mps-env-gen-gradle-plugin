@@ -121,6 +121,21 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 .append(extraVmArgs.get().joinToString("\n")).toString()
         )
 
+        // write idea properties file
+        currentConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
+            StringBuilder(
+                javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
+                    .replace("GENERATION_DATE", currentDate)
+                    .replace("CONFIG_PATH_CONFIG", configBasePath.dir("$environmentName/config").toString())
+                    .replace("CONFIG_PATH_SYSTEM", configBasePath.dir("$environmentName/system").toString())
+                    .replace("CONFIG_PATH_SCRATCH", configBasePath.dir("$environmentName/scratch").toString())
+                    .replace("CONFIG_PATH_PLUGINS", configBasePath.dir("$environmentName/plugins").toString())
+                    .replace("CONFIG_PATH_LOG", configBasePath.dir("$environmentName/log").toString())
+            )
+                // add all user arguments
+                .append(extraIdeaArgs.get().joinToString("\n")).toString()
+        )
+
         if (lightTheme.get()) {
             val optionsPath = currentConfigPath.dir("config/options")
             GFileUtils.mkdirs(optionsPath.asFile)
@@ -163,24 +178,12 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
         // OS specific files ...
         when (Utils.currentOS) {
+            /////////////////////////////////////////////////////////////////////////////////////////////////
             Utils.OS.LINUX -> {
-
                 // sometimes when we obtain MPS via gradle, the sh file is missing +x. These calls return false if they don't work
                 mpsBasePath.dir("bin/mps.sh").get().asFile.setExecutable(true)
                 mpsBasePath.file("bin/linux/fsnotifier").get().asFile.setExecutable(true)
                 mpsBasePath.file("bin/linux/restart.py").get().asFile.setExecutable(true)
-
-                // write idea config file
-                currentConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
-                    StringBuilder(
-                        javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
-                            .replace("GENERATION_DATE", currentDate)
-                            .replace("CONFIG_PATH", currentConfigPath.toString())
-                    )
-                        // add all user arguments
-                        .append(extraIdeaArgs.get().joinToString("\n")).toString()
-                )
-
 
                 // write env file
                 currentConfigPath.file(Constants.ENVIRONMENT_LINUX_FILENAME).asFile.writeText(
@@ -203,21 +206,34 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 )
 
                 shFileName.asFile.writeText(
-                    javaClass.getResource(Constants.MPS_RUN_SCRIPT_LINUX_TEMPLATE_PATH)!!.readText().replace(
-                        "GENERATION_DATE", currentDate
-                    )
+                    javaClass.getResource(Constants.MPS_RUN_SCRIPT_LINUX_TEMPLATE_PATH)!!.readText()
+                        .replace("GENERATION_DATE", currentDate)
                 )
                 shFileName.asFile.setExecutable(true)
-
-                // TODO:
-                //     - avoid 'import settings dialog'
-                //     - automatically open project
-                //     - disable 'tip of the day'
-
             }
 
+            /////////////////////////////////////////////////////////////////////////////////////////////////
+            Utils.OS.WINDOWS -> {
+                // write startup file
+                val batFileName = currentConfigPath.file(
+                    MessageFormat.format(
+                        Constants.MPS_RUN_SCRIPT_WIN_FILENAME,
+                        currentEnvironmentName
+                    )
+                )
+
+                batFileName.asFile.writeText(
+                    javaClass.getResource(Constants.MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH)!!.readText()
+                        .replace("GENERATION_DATE", currentDate)
+                        .replace("CONFIG_BASE_PATH", configBasePath.dir(environmentName).toString() )
+                )
+                batFileName.asFile.setExecutable(true)
+            }
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////
             Utils.OS.MAC -> logger.error("Mac not implemented") // TODO
-            Utils.OS.WINDOWS -> logger.error("Win not implemented") // TODO
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////
             Utils.OS.OTHER -> logger.error("OS not supported")
         }
     }
