@@ -12,4 +12,4 @@ echo IDEA_VM_OPTIONS=CONFIG_BASE_PATH\mps64.vmoptions
 SET MPS_PROPERTIES=CONFIG_BASE_PATH\idea.properties
 SET IDEA_VM_OPTIONS=CONFIG_BASE_PATH\mps64.vmoptions
 
-start CONFIG_MPS_PATH/bin/win/mps.bat
+start "ENVIRONMENT_NAME" CONFIG_MPS_PATH/bin/win/mps.bat

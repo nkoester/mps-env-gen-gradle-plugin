@@ -2,84 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6153df3f-6654-40e8-afb5-31a45b5df2e6" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../../.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../.idea/kotlinc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../build.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.mps/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.mps/.name" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.mps/migration.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.mps/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.mps/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.mps/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage.sandbox/ExampleLanguage.sandbox.msd" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage.sandbox/models/ExampleLanguage.sandbox.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/ExampleLanguage.mpl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/behavior/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/constraints/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/editor/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/structure/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/classes_gen/ExampleLanguage/typesystem/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/classes_gen/ExampleLanguage/generator/templates/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/classes_gen/ExampleLanguage/generator/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/templates/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/ExampleLanguage/generator/templates/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen.caches/deps.cp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/Generator.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/templates/QueriesGenerated.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/templates/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/source_gen/ExampleLanguage/generator/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/generator/templates/ExampleLanguage.generator.templates@generator.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.behavior.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.constraints.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.editor.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.structure.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/models/ExampleLanguage.typesystem.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/behavior/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/behavior/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/constraints/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/constraints/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/editor/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/editor/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/structure/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/structure/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/typesystem/dependencies" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/ExampleLanguage/typesystem/generated" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen.caches/deps.cp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/Language.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/behavior/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/ConstraintsAspectDescriptor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/aspectcps-descriptorclasses.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/checkpoints" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/constraints/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/editor/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/ConceptPresentationAspectImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/LanguageConceptSwitch.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/StructureAspectDescriptor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/aspectcps-descriptorclasses.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/checkpoints" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/structure/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/TypesystemDescriptor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/aspectcps-descriptorclasses.mps" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/checkpoints" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/languages/ExampleLanguage/source_gen/ExampleLanguage/typesystem/trace.info" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../gradle.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../gradle/libs.versions.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../gradle/wrapper/gradle-wrapper.jar" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../gradlew" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../gradlew.bat" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../settings.gradle.kts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../../src/main/resources/templates/mps/config/options/trusted-paths.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/../build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../src/main/kotlin/de/itemis/mps/GenerateMpsEnvironmentTask.kt" beforeDir="false" afterPath="$PROJECT_DIR$/../../src/main/kotlin/de/itemis/mps/GenerateMpsEnvironmentTask.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../src/main/kotlin/de/itemis/mps/MpsEnvironmentGenerationPlugin.kt" beforeDir="false" afterPath="$PROJECT_DIR$/../../src/main/kotlin/de/itemis/mps/MpsEnvironmentGenerationPlugin.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../src/main/kotlin/de/itemis/mps/Settigs.kt" beforeDir="false" afterPath="$PROJECT_DIR$/../../src/main/kotlin/de/itemis/mps/Settigs.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../src/main/resources/templates/linux/environment.env" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../src/main/resources/templates/linux/startMPS.sh" beforeDir="false" afterPath="$PROJECT_DIR$/../../src/main/resources/templates/linux/startMPS.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../src/main/resources/templates/mps/idea.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../../src/main/resources/templates/mps/idea.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../src/main/resources/templates/win/startMPS.bat" beforeDir="false" afterPath="$PROJECT_DIR$/../../src/main/resources/templates/win/startMPS.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,7 +22,7 @@
         <TabState>
           <option name="title" value="Console" />
           <tab>
-            <model ref="30896078-f58d-4808-8122-2ffc6de22d53/r:b667db34-4ac6-4337-bdd1-edc87c50b171(TempModule30896078-f58d-4808-8122-2ffc6de22d53/ConsoleModel_123832550646409)">
+            <model ref="c6ba3e18-c871-4235-8d8b-008356690b91/r:2079646d-e6a4-45be-bf81-b6da7464fa8d(TempModulec6ba3e18-c871-4235-8d8b-008356690b91/ConsoleModel_3025409202147)">
               <persistence version="9" />
               <languages>
                 <devkit ref="70d3d6da-af63-483d-a75f-9c8acf8de332(jetbrains.mps.console.devkit)" />
@@ -112,11 +42,11 @@
                   <concept id="757553790980850366" name="jetbrains.mps.console.base.structure.History" flags="ng" index="3balQm" />
                 </language>
               </registry>
-              <node concept="aymSD" id="1JMwsUqDI9s">
-                <node concept="3balQm" id="1JMwsUqDI9t" role="aymYE" />
-                <node concept="2Clz$F" id="1JMwsUqDI9u" role="aymYO" />
-                <node concept="2_V_lH" id="1JMwsUqDI9v" role="1PhJh3">
-                  <ref role="2_V_lI" node="1JMwsUqDI9u" resolve="CommandHolder" />
+              <node concept="aymSD" id="7Rhmk1NpoUQ">
+                <node concept="3balQm" id="7Rhmk1NpoUR" role="aymYE" />
+                <node concept="2Clz$F" id="7Rhmk1NpoUS" role="aymYO" />
+                <node concept="2_V_lH" id="7Rhmk1NpoUT" role="1PhJh3">
+                  <ref role="2_V_lI" node="7Rhmk1NpoUS" resolve="CommandHolder" />
                 </node>
               </node>
             </model>
@@ -183,10 +113,32 @@
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1" />
     <panes>
-      <pane id="Scope" />
-      <pane id="FileSystem" />
       <pane id="ProjectPane">
         <subPane>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="67160e8c-6a22-4574-a93c-427df3624466" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ExampleLanguage" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="exampleProject" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="bec5bd5e-19f4-4b9c-8557-74df5de1c0e0(ExampleLanguage)" />
+              <option name="myItemType" value="" />
+            </PATH_ELEMENT>
+          </PATH>
           <PATH>
             <PATH_ELEMENT>
               <option name="myItemId" value="exampleProject" />
@@ -231,30 +183,6 @@
               <option name="myItemType" value="" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="bec5bd5e-19f4-4b9c-8557-74df5de1c0e0(ExampleLanguage)" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="exampleProject" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="67160e8c-6a22-4574-a93c-427df3624466" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ExampleLanguage" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="exampleProject" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
               <option name="myItemId" value="67160e8c-6a22-4574-a93c-427df3624466" />
               <option name="myItemType" value="" />
             </PATH_ELEMENT>
@@ -271,6 +199,8 @@
           </SELECTED>
         </subPane>
       </pane>
+      <pane id="Scope" />
+      <pane id="FileSystem" />
     </panes>
   </component>
   <component name="ProjectViewState">

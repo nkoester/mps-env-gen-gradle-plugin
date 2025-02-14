@@ -1,5 +1,6 @@
 package de.itemis.mps
 
+import jdk.jshell.execution.Util
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
@@ -19,7 +20,6 @@ open class MpsConfigurationGenerationSettings @Inject constructor(val project: P
     @Input
     val targetPath: DirectoryProperty = project.objects.directoryProperty().convention(project.layout.projectDirectory.dir(".mpsconfig"))
 
-
     val environmentList: MutableSet<MpsEnvironment> = mutableSetOf()
 
     fun environment(environmentName : String, action: Action<MpsEnvironment>) {
@@ -36,6 +36,8 @@ open class MpsConfigurationGenerationSettings @Inject constructor(val project: P
 class MpsEnvironment(val environmentName: String, val project: Project) {
     var mpsSettings :MpsSettings = MpsSettings(project)
     var ideaSettings : IdeaSettings = IdeaSettings(project)
+
+    val osToGenerate: ListProperty<Utils.OS> = project.objects.listProperty<Utils.OS>().convention(listOf(Utils.OS.LINUX, Utils.OS.WINDOWS,Utils.OS.MAC))
 
     fun mpsSettings(action: Action<MpsSettings>) {
         mpsSettings = MpsSettings(project)

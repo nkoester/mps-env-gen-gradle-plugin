@@ -28,7 +28,7 @@ mpsEnvironments {
 //    targetPath.set(project.layout.projectDirectory.dir(".mpsconfig"))
 
     environment("default") {
-//         osStartupScriptsToGenerate = listOf<Utils.OS>(Utils.OS.LINUX, Utils.OS.WINDOWS, Utils.OS.MAC)
+        osToGenerate = listOf<Utils.OS>(Utils.OS.LINUX, Utils.OS.WINDOWS)
 
         mpsSettings {
             mpsProjectPath.set(project.layout.projectDirectory.dir("mps"))
@@ -36,14 +36,12 @@ mpsEnvironments {
             xms.set("1024m")
             xmx.set("2048m")
             ratio.set(3)
-            extraVmmArgs.set(project.objects.listProperty<String>().convention(listOf("# This is an extra line in the vmargs file")))
+            extraVmmArgs.set(project.objects.listProperty<String>().convention(listOf("# This is an extra line in the vmargs file","# And another ...")))
 
             // TODO?
-            //        welcomeMessage = false
-            //        openProjectByDefault = true
             // extraGlobalLibraries = "some/paths/here/?"
-
         }
+
         ideaSettings {
             extraIdeaArgs.set(listOf("# This is an extra line in the idea.prooperties file ..."))
         }

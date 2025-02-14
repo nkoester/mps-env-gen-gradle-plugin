@@ -24,6 +24,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     mpsBasePath.set(settings.mpsBasePath)
 
                     environmentName.set(leEnvironment.environmentName)
+                    osToGenerate.set(leEnvironment.osToGenerate)
 
                     configBasePath.set(
                         project.layout.projectDirectory.dir(

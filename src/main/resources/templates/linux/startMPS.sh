@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 #
-# date: GENERATION_DATE
+# date: REPLACE_ME__GENERATION_DATE
+# version: REPLACE_ME__VERSION
 # description: This file automatically generated. Do not modify.
 #
 #
@@ -20,12 +21,13 @@
 CURRENT_BASE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 cd "${CURRENT_BASE_PATH}"
 
-# read our environment
-# gives us
-#    $CONFIG_BASE_PATH
-#    $CONFIG_MPS_PATH
-#    $CONFIG_TMUX_SESSION_NAME
-source environment.env
+# the environment
+export _JAVA_AWT_WM_NONREPARENTING=1
+CONFIG_PATH="REPLACE_ME__CONFIG_PATH"
+CONFIG_MPS_PATH="REPLACE_ME__CONFIG_MPS_PATH"
+MPS_PATH="REPLACE_ME__MPS_PATH"
+
+CONFIG_TMUX_SESSION_NAME="REPLACE_ME__CONFIG_TMUX_SESSION_NAME"
 CURRENT_IDEA_PATH=$(cat ${CURRENT_BASE_PATH}/idea.properties | grep idea.config.path | cut -d "=" -f2)
 
 function testPaths {
@@ -34,21 +36,22 @@ function testPaths {
     # We could double check via this. But thats would be overkill. Might be helpful for someone.
     # IDEA_BASE_PATH=$(head -n 1 idea.properties | cut -d "=" -f2 | awk -F'/config' '{print $1}')
 
-    if [[ "${CONFIG_BASE_PATH}" != "${CURRENT_BASE_PATH}" ]] && [[ "${CURRENT_BASE_PATH}" != "." ]]; then
+    if [[ "${CONFIG_PATH}" != "${CURRENT_BASE_PATH}" ]] && [[ "${CURRENT_BASE_PATH}" != "." ]]; then
         echo "fail."
         echo "The base path seems to be broken"
-        echo "    configured path:         ${CONFIG_BASE_PATH}"
+        echo "    configured path:         ${CONFIG_PATH}"
         echo "    current actual path:     ${CURRENT_BASE_PATH}"
         echo "    paths in idea.property   ${CURRENT_IDEA_PATH}"
         echo ""
         read -p "Automatically fix it? [yN] " ANSWER
         if [[ "${ANSWER}" == "y" ]] || [[ "${ANSWER}" == "Y" ]]
         then
+          # TODO validate and adjust
             echo "Replacing all wrong paths in 'idea.properties'"
-            sed -i 's~'"${CONFIG_BASE_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' idea.properties
+            sed -i 's~'"${CONFIG_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' idea.properties
 
             echo "Replacing all wrong paths in 'environment.env'"
-            sed -i 's~'"${CONFIG_BASE_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' environment.env
+            sed -i 's~'"${CONFIG_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' environment.env
 
             # reload to get the new paths
             source environment.env
@@ -65,8 +68,8 @@ function testPaths {
 
 function tmuxd {
     echo "Spawning tmux session with name '${CONFIG_TMUX_SESSION_NAME}'"
-    echo "CALLING:     $ MPS_PROPERTIES=${CONFIG_BASE_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_BASE_PATH}/mps64.vmoptions  ${CONFIG_MPS_PATH}/bin/mps.sh"
-    tmux new-session -d -s "$CONFIG_TMUX_SESSION_NAME" "MPS_PROPERTIES=${CONFIG_BASE_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_BASE_PATH}/mps64.vmoptions  ${CONFIG_MPS_PATH}/bin/mps.sh"
+    echo "CALLING:     $ MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh"
+    tmux new-session -d -s "$CONFIG_TMUX_SESSION_NAME" "MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh"
 }
 
 function tmuxa {
@@ -75,8 +78,8 @@ function tmuxa {
 }
 
 function followLog {
-    touch ${CONFIG_BASE_PATH}/log/idea.log
-    $TERMINAL --title="MPS-LOG" -e tail -F ${CONFIG_BASE_PATH}/log/idea.log&
+    touch ${CONFIG_MPS_PATH}/log/idea.log
+    $TERMINAL --title="MPS-LOG" -e tail -F ${CONFIG_MPS_PATH}/log/idea.log&
 }
 
 # run path test
@@ -100,6 +103,6 @@ else
     echo " --> No/unknown argument ('${1}') given - startig MPS directly in this terminal"
     echo "     Alternative arguments are: tmuxD, tmuxA, tmuxLD, and tmuxLA"
     echo " (!)"
-    echo "CALLING:     $ MPS_PROPERTIES=${CONFIG_BASE_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_BASE_PATH}/mps64.vmoptions  ${CONFIG_MPS_PATH}/bin/mps.sh"
-    MPS_PROPERTIES=${CONFIG_BASE_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_BASE_PATH}/mps64.vmoptions  ${CONFIG_MPS_PATH}/bin/mps.sh
+    echo "CALLING:     $ MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh"
+    MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh
 fi
