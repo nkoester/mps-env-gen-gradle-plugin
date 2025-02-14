@@ -32,7 +32,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     val environmentName: Property<String> = project.objects.property<String>()
 
     @get:InputDirectory
-    val mpsBasePath: DirectoryProperty = project.objects.directoryProperty()
+    val mpsPath: DirectoryProperty = project.objects.directoryProperty()
 
     @get:InputDirectory
     val mpsProjectPath: DirectoryProperty = project.objects.directoryProperty()
@@ -83,7 +83,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         val currentVersion: String = GenerateMpsEnvironmentTask::class.java.getPackage().implementationVersion
         val currentConfigPath = configBasePath.dir(environmentName).get()
         val currentMpsConfigPath = configBasePath.dir("${environmentName.get()}/mps").get()
-        val currentMpsPath = mpsBasePath.get().toString()
+        val currentMpsPath = mpsPath.get().toString()
 
         println("---------------------------------")
         println("Running env generator version $currentVersion")
@@ -112,13 +112,14 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         currentMpsConfigPath.file(Constants.MPS_VMOPTIONS_FILENAME).asFile.writeText(
             StringBuilder(
                 javaClass.getResource(Constants.MPS_VMOPTIONS_TEMPLATE_PATH)!!.readText()
-                    .replace("GENERATION_DATE", currentDate)
-                    .replace("<XMX_VALUE>", xmx.get())
-                    .replace("<XMS_VALUE>", xms.get())
-                    .replace("<RATIO_VALUE>", "${ratioValue.get()}")
-                    .replace("DEBUGENABLE", if (debugEnable.get()) "" else "#")
-                    .replace("DEBUGPORT", "${debugPort.get()}")
-                    .replace("SUSPEND", if (debugSuspend.get()) "y" else "n")
+                    .replace("REPLACE_ME__GENERATION_DATE", currentDate)
+                    .replace("REPLACE_ME__VERSION", currentVersion)
+                    .replace("REPLACE_ME__XMX_VALUE", xmx.get())
+                    .replace("REPLACE_ME__XMS_VALUE", xms.get())
+                    .replace("REPLACE_ME__RATIO_VALUE", "${ratioValue.get()}")
+                    .replace("REPLACE_ME__DEBUGENABLE", if (debugEnable.get()) "" else "#")
+                    .replace("REPLACE_ME__DEBUGPORT", "${debugPort.get()}")
+                    .replace("REPLACE_ME__SUSPEND", if (debugSuspend.get()) "y" else "n")
             )
                 // add all user arguments
                 .append(extraVmArgs.get().joinToString("\n")).toString()
@@ -188,9 +189,9 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     logger.warn("Generating linux start scripts for $currentEnvironmentName ...")
 
                     // sometimes when we obtain MPS via gradle, the sh file is missing +x. These calls return false if they don't work
-                    mpsBasePath.dir("bin/mps.sh").get().asFile.setExecutable(true)
-                    mpsBasePath.file("bin/linux/fsnotifier").get().asFile.setExecutable(true)
-                    mpsBasePath.file("bin/linux/restart.py").get().asFile.setExecutable(true)
+                    mpsPath.dir("bin/mps.sh").get().asFile.setExecutable(true)
+                    mpsPath.file("bin/linux/fsnotifier").get().asFile.setExecutable(true)
+                    mpsPath.file("bin/linux/restart.py").get().asFile.setExecutable(true)
 
                     // write startup file
                     val shFileName = currentConfigPath.file(
@@ -216,6 +217,9 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 Utils.OS.WINDOWS -> {
                     logger.warn("Generating win start scripts for $currentEnvironmentName ...")
 
+                    // TODO: how to handle generic MPS distributions?
+//                    mpsBasePath.dir("bin/win/*").get().asFile.copyRecursively()
+
                     // write startup file
                     val batFileName = currentConfigPath.file(
                         MessageFormat.format(
@@ -226,19 +230,19 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
                     batFileName.asFile.writeText(
                         javaClass.getResource(Constants.MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH)!!.readText()
-                            .replace("GENERATION_DATE", currentDate)
-                            .replace("ENVIRONMENT_NAME", environmentName.get())
-                            .replace("CONFIG_MPS_PATH", mpsBasePath.get().toString())
-                            .replace("CONFIG_BASE_PATH", configBasePath.dir(environmentName).toString())
+                            .replace("REPLACE_ME__GENERATION_DATE", currentDate)
+                            .replace("REPLACE_ME__CONFIG_PATH", configBasePath.dir(environmentName).toString())
+                            .replace("REPLACE_ME__CONFIG_MPS_PATH", mpsPath.get().toString())
+                            .replace("REPLACE_ME__EVIRONMENT_NAME", environmentName.get())
                     )
                     batFileName.asFile.setExecutable(true)
                 }
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////
-                Utils.OS.MAC -> logger.error("Mac not implemented") // TODO
+                Utils.OS.MAC -> logger.error("Environment ${environmentName.get()}: Generation of OSX startup scripts not implemented yet") // TODO
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////
-                Utils.OS.OTHER -> logger.error("OS not supported")
+                Utils.OS.OTHER -> logger.error("Environment ${environmentName.get()} Generation: Only Linux/Win/OSX are supported.")
             }
         }
     }

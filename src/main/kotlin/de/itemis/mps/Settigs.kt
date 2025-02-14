@@ -1,6 +1,5 @@
 package de.itemis.mps
 
-import jdk.jshell.execution.Util
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
@@ -11,15 +10,18 @@ import org.gradle.kotlin.dsl.listProperty
 import org.gradle.kotlin.dsl.property
 import javax.inject.Inject
 
-
 open class MpsConfigurationGenerationSettings @Inject constructor(val project: Project){
 
     @Input
-    val mpsBasePath: DirectoryProperty = project.objects.directoryProperty().convention(project.layout.buildDirectory.dir("mps"))
+    val mpsPath: DirectoryProperty = project.objects.directoryProperty()
 
     @Input
     val targetPath: DirectoryProperty = project.objects.directoryProperty().convention(project.layout.projectDirectory.dir(".mpsconfig"))
 
+    @Input
+    val mpsProjectPath: DirectoryProperty = project.objects.directoryProperty()
+
+    @Input
     val environmentList: MutableSet<MpsEnvironment> = mutableSetOf()
 
     fun environment(environmentName : String, action: Action<MpsEnvironment>) {
@@ -38,6 +40,8 @@ class MpsEnvironment(val environmentName: String, val project: Project) {
     var ideaSettings : IdeaSettings = IdeaSettings(project)
 
     val osToGenerate: ListProperty<Utils.OS> = project.objects.listProperty<Utils.OS>().convention(listOf(Utils.OS.LINUX, Utils.OS.WINDOWS,Utils.OS.MAC))
+    val mpsPathLocal: DirectoryProperty = project.objects.directoryProperty()
+    val mpsProjectPathLocal: DirectoryProperty = project.objects.directoryProperty()
 
     fun mpsSettings(action: Action<MpsSettings>) {
         mpsSettings = MpsSettings(project)
@@ -49,22 +53,17 @@ class MpsEnvironment(val environmentName: String, val project: Project) {
         action.execute(ideaSettings)
     }
 }
+
 class MpsSettings(val project: Project) {
-
-    val mpsProjectPath: DirectoryProperty = project.objects.directoryProperty().convention(project.layout.projectDirectory.dir("mps"))
-
-    @Input
     val xms: Property<String> = project.objects.property<String>().convention("1024m")
-
-    @Input
     var xmx: Property<String> = project.objects.property<String>().convention("2048m")
-
     val ratio: Property<Int> = project.objects.property<Int>().convention(4)
+    val lightTheme: Property<Boolean> = project.objects.property<Boolean>().convention(true)
 
     val debugEnabled: Property<Boolean> = project.objects.property<Boolean>().convention(false)
     val debugPort: Property<Int> = project.objects.property<Int>().convention(5071)
     val debugSuspend: Property<Boolean> = project.objects.property<Boolean>().convention(false)
-    val lightTheme: Property<Boolean> = project.objects.property<Boolean>().convention(true)
+
     val extraVmmArgs: ListProperty<String> = project.objects.listProperty<String>().convention(project.objects.listProperty<String>())
 }
 

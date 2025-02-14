@@ -1,29 +1,12 @@
-import de.itemis.mps.Utils
-import kotlin.io.path.Path
+ # 
+ 
 
-plugins {
-    id("de.itemis.mps.environment-generator") version "1.1+"
-}
+# Example configuration
 
-repositories {
-    // itemis nexus
-    maven { url = uri("https://artifacts.itemis.cloud/repository/maven-mps/") }
-    mavenLocal()
-}
 
-val mps: Configuration by configurations.creating
-val myMpsPath = Path(project.layout.buildDirectory.get().toString(), "mps")
-
-dependencies {
-    mps("com.jetbrains:mps:2022.2.4")
-}
-val extractMps by tasks.registering(Copy::class) {
-    from({ mps.resolve().map { zipTree(it) } })
-    into(myMpsPath)
-}
+```kts
 
 val pathToYourMPSInstallation = Path("/vol/mps/MPS-2022.2.4-linux/").toFile()
-
 
 // the environments block allows you to define your desired
 // MPS environments you want to create
@@ -114,3 +97,17 @@ mpsEnvironments {
         }
     }
 }
+```
+
+
+TLDR - A minimal config:
+```kts
+val nameOfMpsProjectPath = "mps-project"
+val pathToYourMPSInstallation = Path("/vol/mps/MPS-2022.2.4-linux/").toFile()
+
+mpsEnvironments {
+    mpsPath.set(pathToYourMPSInstallation)
+    mpsProjectPath.set(project.layout.projectDirectory.dir(nameOfMpsProjectPath))
+    environment("0-default"){}
+}
+```

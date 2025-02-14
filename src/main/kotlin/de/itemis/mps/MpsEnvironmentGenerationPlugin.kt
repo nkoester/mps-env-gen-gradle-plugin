@@ -21,7 +21,19 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     group = "mps"
                     description = "Generates an isolated MPS configuration prefix."
 
-                    mpsBasePath.set(settings.mpsBasePath)
+                    // overwrite MPS path if local definition exists
+                    if (leEnvironment.mpsPathLocal.isPresent){
+                        mpsPath.set(leEnvironment.mpsPathLocal)
+                    } else {
+                        mpsPath.set(settings.mpsPath)
+                    }
+
+                    // overwrite project path if local definition exists
+                    if (leEnvironment.mpsPathLocal.isPresent){
+                        mpsProjectPath.set(leEnvironment.mpsProjectPathLocal)
+                    }else{
+                        mpsProjectPath.set(settings.mpsProjectPath)
+                    }
 
                     environmentName.set(leEnvironment.environmentName)
                     osToGenerate.set(leEnvironment.osToGenerate)
@@ -32,7 +44,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                         )
                     )
 
-                    mpsProjectPath.set(leEnvironment.mpsSettings.mpsProjectPath)
+                    mpsProjectPath.set(settings.mpsProjectPath)
                     lightTheme.set(leEnvironment.mpsSettings.lightTheme)
                     xms.set(leEnvironment.mpsSettings.xms)
                     xmx.set(leEnvironment.mpsSettings.xmx)

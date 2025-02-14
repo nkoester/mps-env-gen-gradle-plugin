@@ -1,12 +1,13 @@
 #
 #
-# date: GENERATION_DATE
+# date: REPLACE_ME__GENERATION_DATE
+# version: REPLACE_ME__VERSION
 # description: This file automatically generated. Do not modify.
 #
 #
--Xms<XMS_VALUE>
--Xmx<XMX_VALUE>
--XX:NewRatio=<RATIO_VALUE>
+-XmsREPLACE_ME__XMS_VALUE
+-XmxREPLACE_ME__XMX_VALUE
+-XX:NewRatio=REPLACE_ME__RATIO_VALUE
 -XX:ReservedCodeCacheSize=512m
 -XX:+UseG1GC
 -XX:SoftRefLRUPolicyMSPerMB=50
@@ -31,4 +32,4 @@
 -Didea.trust.disabled=false
 -Dfreeze.reporter.enabled=false
 -Didea.indices.psi.dependent.default=false
-DEBUGENABLE-agentlib:jdwp=transport=dt_socket,server=y,suspend=SUSPEND,address=DEBUGPORT
+REPLACE_ME__DEBUGENABLE-agentlib:jdwp=transport=dt_socket,server=y,suspend=REPLACE_ME__SUSPEND,address=REPLACE_ME__DEBUGPORT

@@ -13,7 +13,7 @@ build.properties
 
 /repositories/
 tmp/
-mps/build
+mps-project/build
 
 trace.info
 classes_gen
