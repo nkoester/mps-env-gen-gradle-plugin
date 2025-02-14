@@ -1,5 +1,14 @@
- # 
+# MPS Environment Generation Gradle Plugin
  
+A small Gradle plugin which allows you to define isolated MPS environments.
+Environment are self-contained and can consequently be started in parallel.
+
+This setup can be helpful if you have a repository checked out multiple times or need to quickly review a pull request without changing your MPS setup and/or configuration.
+
+The generated configuration prefix are written to `.mpsconfig` by default and are considered generated artifacts which should not be checked into VCS but rather be generated locally.
+
+
+# Usage 
 
 # Example configuration
 

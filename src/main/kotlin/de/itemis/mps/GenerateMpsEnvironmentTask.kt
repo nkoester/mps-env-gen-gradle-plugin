@@ -125,23 +125,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 .append(extraVmArgs.get().joinToString("\n")).toString()
         )
 
-        // write idea properties file
-        currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
-            StringBuilder(
-                javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
-                    .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                    .replace("REPLACE_ME__VERSION", currentVersion)
-                    .replace("REPLACE_ME__CONFIG_PATH_CONFIG", currentMpsConfigPath.dir("config").toString())
-                    .replace("REPLACE_ME__CONFIG_PATH_SYSTEM", currentMpsConfigPath.dir("system").toString())
-                    .replace("REPLACE_ME__CONFIG_PATH_SCRATCH", currentMpsConfigPath.dir("scratch").toString())
-                    .replace("REPLACE_ME__CONFIG_PATH_PLUGINS", currentMpsConfigPath.dir("plugins").toString())
-                    .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
-            )
-                // add all user arguments
-                .append(extraIdeaArgs.get().joinToString("\n")).toString()
-        )
-
-        if (lightTheme.get()) {
+                if (lightTheme.get()) {
             val optionsPath = currentMpsConfigPath.dir("config/options")
             GFileUtils.mkdirs(optionsPath.asFile)
             currentMpsConfigPath.dir(optionsPath.toString()).file("laf.xml").asFile.writeText(
@@ -188,6 +172,22 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 Utils.OS.LINUX -> {
                     logger.warn("Generating linux start scripts for $currentEnvironmentName ...")
 
+                    // write idea properties file
+                    currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
+                        StringBuilder(
+                            javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
+                                .replace("REPLACE_ME__GENERATION_DATE", currentDate)
+                                .replace("REPLACE_ME__VERSION", currentVersion)
+                                .replace("REPLACE_ME__CONFIG_PATH_CONFIG", currentMpsConfigPath.dir("config").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_SYSTEM", currentMpsConfigPath.dir("system").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_SCRATCH", currentMpsConfigPath.dir("scratch").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_PLUGINS", currentMpsConfigPath.dir("plugins").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
+                        )
+                            // add all user arguments
+                            .append(extraIdeaArgs.get().joinToString("\n")).toString()
+                    )
+
                     // sometimes when we obtain MPS via gradle, the sh file is missing +x. These calls return false if they don't work
                     mpsPath.dir("bin/mps.sh").get().asFile.setExecutable(true)
                     mpsPath.file("bin/linux/fsnotifier").get().asFile.setExecutable(true)
@@ -220,6 +220,23 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     // TODO: how to handle generic MPS distributions?
 //                    mpsBasePath.dir("bin/win/*").get().asFile.copyRecursively()
 
+                    // write idea properties file
+                    currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
+                        StringBuilder(
+                            javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
+                                .replace("REPLACE_ME__GENERATION_DATE", currentDate)
+                                .replace("REPLACE_ME__VERSION", currentVersion)
+                                .replace("REPLACE_ME__CONFIG_PATH_CONFIG", currentMpsConfigPath.dir("config").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_SYSTEM", currentMpsConfigPath.dir("system").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_SCRATCH", currentMpsConfigPath.dir("scratch").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_PLUGINS", currentMpsConfigPath.dir("plugins").toString())
+                                .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
+                                .replace("\\", "\\\\")
+                        )
+                            // add all user arguments
+                            .append(extraIdeaArgs.get().joinToString("\n")).toString()
+                    )
+
                     // write startup file
                     val batFileName = currentConfigPath.file(
                         MessageFormat.format(
@@ -231,8 +248,8 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     batFileName.asFile.writeText(
                         javaClass.getResource(Constants.MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH)!!.readText()
                             .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                            .replace("REPLACE_ME__CONFIG_PATH", configBasePath.dir(environmentName).toString())
-                            .replace("REPLACE_ME__CONFIG_MPS_PATH", mpsPath.get().toString())
+                            .replace("REPLACE_ME__CONFIG_MPS_PATH", currentConfigPath.toString())
+                            .replace("REPLACE_ME__MPS_PATH", currentMpsPath)
                             .replace("REPLACE_ME__EVIRONMENT_NAME", environmentName.get())
                     )
                     batFileName.asFile.setExecutable(true)

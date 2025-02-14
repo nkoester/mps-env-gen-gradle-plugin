@@ -22,6 +22,9 @@ val extractMps by tasks.registering(Copy::class) {
     into(myMpsPath)
 }
 
+
+// TODO: JDK selection
+
 val pathToYourMPSInstallation = Path("/vol/mps/MPS-2022.2.4-linux/").toFile()
 
 
