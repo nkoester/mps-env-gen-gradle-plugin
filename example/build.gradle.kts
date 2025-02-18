@@ -11,16 +11,33 @@ repositories {
     mavenLocal()
 }
 
-val mps: Configuration by configurations.creating
 val myMpsPath = Path(project.layout.buildDirectory.get().toString(), "mps")
+val myDependencyPath = Path(project.layout.buildDirectory.get().toString(), "dependencies")
+
+val mps: Configuration by configurations.creating
+val mpsExtensions: Configuration by configurations.creating
 
 dependencies {
     mps("com.jetbrains:mps:2022.2.4")
+    mpsExtensions("de.itemis.mps:extensions:2022.2.2988.736f389")
 }
+
 val extractMps by tasks.registering(Copy::class) {
     from({ mps.resolve().map { zipTree(it) } })
     into(myMpsPath)
 }
+val extractMPS_extensions by tasks.registering(Copy::class) {
+    from({ mpsExtensions.resolve().map { zipTree(it) } })
+    into(myDependencyPath)
+}
+
+val setup by tasks.registering {
+    group = "Setup"
+    description = "Download and extract MPS and the all MPS dependencies."
+    dependsOn(extractMps)
+    dependsOn(extractMPS_extensions)
+}
+
 
 
 // TODO: JDK selection
