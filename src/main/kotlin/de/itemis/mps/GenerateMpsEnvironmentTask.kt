@@ -248,7 +248,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     batFileName.asFile.writeText(
                         javaClass.getResource(Constants.MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH)!!.readText()
                             .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                            .replace("REPLACE_ME__CONFIG_MPS_PATH", currentConfigPath.toString())
+                            .replace("REPLACE_ME__CONFIG_MPS_PATH", currentMpsConfigPath.toString())
                             .replace("REPLACE_ME__MPS_PATH", currentMpsPath)
                             .replace("REPLACE_ME__EVIRONMENT_NAME", environmentName.get())
                     )
