@@ -56,7 +56,9 @@ mpsEnvironments {
     //               if you get your MPS via gradle, you can use it!
 //    mpsPath.set(project.layout.buildDirectory.dir("mps"))
 
-    // targetPath - refers to the folder where environments are generated into (default: '.mpsconfig')
+    // targetPath - refers to the folder where environments are generated into.
+    //              There are no checks and files will be written to the given path.
+    //              (default: 'project.layout.projectDirectory.dir(".mpsconfig")')
     targetPath.set(project.layout.projectDirectory.dir(".mpsconfig"))
 
     // mpsProjectPath - the path where your MPS project is at (no default)
@@ -64,12 +66,14 @@ mpsEnvironments {
     //                  setting mpsProjectPathLocal)
     mpsProjectPath.set(project.layout.projectDirectory.dir("mps-project"))
 
-    // most simple way to create a new environment named 'default'
+    // most simple way to create a new environment named 'default' for the OS you run
     environment("0-default"){}
 
     environment("1-special") {
         // osToGenerate - specifies for which OS to generate a startup script
-        osToGenerate = listOf<Utils.OS>(Utils.OS.LINUX)
+        //                beware that generating for an OS with different paths
+        //                ('/' vs '\') will to broken environments!
+        osToGenerate = listOf<Utils.OS>(Utils.OS.LINUX, Utils.OS.MAC, Utils.OS.WINDOWS)
 
         // you can overwrite the mpsPath and use any other MPS installation
         mpsPathLocal.set(pathToYourMPSInstallation)

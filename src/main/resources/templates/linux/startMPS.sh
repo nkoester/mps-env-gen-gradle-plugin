@@ -19,7 +19,7 @@
 
 # go to location of this script
 CURRENT_BASE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-cd "${CURRENT_BASE_PATH}"
+cd "${CURRENT_BASE_PATH}" || ( printf "Error: Unable to cd into base path\n" && exit 1 )
 
 # the environment
 export _JAVA_AWT_WM_NONREPARENTING=1
@@ -28,47 +28,45 @@ CONFIG_MPS_PATH="REPLACE_ME__CONFIG_MPS_PATH"
 MPS_PATH="REPLACE_ME__MPS_PATH"
 
 CONFIG_TMUX_SESSION_NAME="REPLACE_ME__CONFIG_TMUX_SESSION_NAME"
-CURRENT_IDEA_PATH=$(cat ${CURRENT_BASE_PATH}/idea.properties | grep idea.config.path | cut -d "=" -f2)
+CURRENT_IDEA_PATH=$(cat "${CURRENT_BASE_PATH}/idea.properties" | grep "idea.config.path" | cut -d "=" -f2)
 
 function testPaths {
-    echo -n "Checking path 'tegrity ... "
+    printf "Checking path 'tegrity ... "
 
-    # We could double check via this. But thats would be overkill. Might be helpful for someone.
+    # We could double check via this. But that would be overkill. Might be helpful for someone.
     # IDEA_BASE_PATH=$(head -n 1 idea.properties | cut -d "=" -f2 | awk -F'/config' '{print $1}')
 
     if [[ "${CONFIG_PATH}" != "${CURRENT_BASE_PATH}" ]] && [[ "${CURRENT_BASE_PATH}" != "." ]]; then
-        echo "fail."
-        echo "The base path seems to be broken"
-        echo "    configured path:         ${CONFIG_PATH}"
-        echo "    current actual path:     ${CURRENT_BASE_PATH}"
-        echo "    paths in idea.property   ${CURRENT_IDEA_PATH}"
-        echo ""
+        printf "fail.\n"
+        printf "The base path seems to be broken\n"
+        printf "    configured path:         ${CONFIG_PATH}\n"
+        printf "    current actual path:     ${CURRENT_BASE_PATH}\n"
+        printf "    paths in idea.property   ${CURRENT_IDEA_PATH}\n\n"
         read -p "Automatically fix it? [yN] " ANSWER
         if [[ "${ANSWER}" == "y" ]] || [[ "${ANSWER}" == "Y" ]]
         then
-          # TODO validate and adjust
-            echo "Replacing all wrong paths in 'idea.properties'"
+            printf "Replacing all wrong paths in 'idea.properties'\n"
             sed -i 's~'"${CONFIG_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' idea.properties
 
-            echo "Replacing all wrong paths in 'environment.env'"
+            printf "Replacing all wrong paths in 'environment.env'\n"
             sed -i 's~'"${CONFIG_PATH}"'~'"${CURRENT_BASE_PATH}"'~g' environment.env
 
             # reload to get the new paths
             source environment.env
         else
-            echo "Will not update paths."
-            echo ""
-            echo "WARNING: Starting MPS will most likely fail. The configured path ${CURRENT_BASE_PATH} does not exist anymore. MPS will fall back to the default configuration path."
+            printf "Will not update paths.\n\n"
+            printf "WARNING: Starting MPS will most likely fail. The configured path ${CURRENT_BASE_PATH} does not exist anymore. MPS will fall back to the default configuration path.\n"
             read -n 1 -s -r -p "Press any key to continue"
         fi
     else
-        echo "ok."
+        printf "ok.\n"
     fi
 }
 
 function tmuxd {
-    echo "Spawning tmux session with name '${CONFIG_TMUX_SESSION_NAME}'"
-    echo "CALLING:     $ MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh"
+    printf "Spawning tmux session with name '${CONFIG_TMUX_SESSION_NAME}'\n"
+    printf "Calling MPS via ...\n"
+    printf " >>> MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh"
     tmux new-session -d -s "$CONFIG_TMUX_SESSION_NAME" "MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh"
 }
 
@@ -99,10 +97,10 @@ elif [[ "$1" == "tmuxLA" ]]; then
     tmuxd
     tmuxa
 else
-    echo " (!)"
-    echo " --> No/unknown argument ('${1}') given - startig MPS directly in this terminal"
-    echo "     Alternative arguments are: tmuxD, tmuxA, tmuxLD, and tmuxLA"
-    echo " (!)"
-    echo "CALLING:     $ MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh"
+    printf ' (!)\n'
+    printf ' --> No/unknown argument %s given - startig MPS directly in this terminal\n' "${1}"
+    printf '     Alternative arguments are: tmuxD, tmuxA, tmuxLD, and tmuxLA\n'
+    printf ' (!)\n\n'
+    printf "Calling MPS via ... \n >>> MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh\n"
     MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh
 fi

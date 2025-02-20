@@ -38,11 +38,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     environmentName.set(leEnvironment.environmentName)
                     osToGenerate.set(leEnvironment.osToGenerate)
 
-                    configBasePath.set(
-                        project.layout.projectDirectory.dir(
-                            settings.targetPath.get().toString()
-                        )
-                    )
+                    configBasePath.set(settings.targetPath)
 
                     mpsProjectPath.set(settings.mpsProjectPath)
                     lightTheme.set(leEnvironment.mpsSettings.lightTheme)

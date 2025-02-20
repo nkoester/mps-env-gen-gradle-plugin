@@ -39,7 +39,7 @@ class MpsEnvironment(val environmentName: String, val project: Project) {
     var mpsSettings :MpsSettings = MpsSettings(project)
     var ideaSettings : IdeaSettings = IdeaSettings(project)
 
-    val osToGenerate: ListProperty<Utils.OS> = project.objects.listProperty<Utils.OS>().convention(listOf(Utils.OS.LINUX, Utils.OS.WINDOWS,Utils.OS.MAC))
+    val osToGenerate: ListProperty<Utils.OS> = project.objects.listProperty<Utils.OS>().convention(listOf(Utils.currentOS))
     val mpsPathLocal: DirectoryProperty = project.objects.directoryProperty()
     val mpsProjectPathLocal: DirectoryProperty = project.objects.directoryProperty()
 

@@ -2,6 +2,7 @@ package de.itemis.mps
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.Incubating
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -21,12 +22,10 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
     // the default folder will always be written - even if this is changed in the user configuration...
     @get:OutputDirectory
-    val configBasePath: DirectoryProperty =
-        project.objects.directoryProperty().convention(project.layout.buildDirectory)
+    val configBasePath: DirectoryProperty = project.objects.directoryProperty()
 
     @Input
-    val osToGenerate: ListProperty<Utils.OS> =
-        project.objects.listProperty<Utils.OS>().convention(listOf(Utils.OS.LINUX))
+    val osToGenerate: ListProperty<Utils.OS> = project.objects.listProperty<Utils.OS>()
 
     @get:Input
     val environmentName: Property<String> = project.objects.property<String>()
@@ -125,7 +124,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 .append(extraVmArgs.get().joinToString("\n")).toString()
         )
 
-                if (lightTheme.get()) {
+        if (lightTheme.get()) {
             val optionsPath = currentMpsConfigPath.dir("config/options")
             GFileUtils.mkdirs(optionsPath.asFile)
             currentMpsConfigPath.dir(optionsPath.toString()).file("laf.xml").asFile.writeText(
@@ -166,56 +165,36 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         }
 
         // OS specific files ...
-        osToGenerate.get().forEach { currOS ->
-            when (currOS) {
+        osToGenerate.get().forEach { currentOs ->
+            when (currentOs) {
                 /////////////////////////////////////////////////////////////////////////////////////////////////
                 Utils.OS.LINUX -> {
                     logger.warn("Generating linux start scripts for $currentEnvironmentName ...")
 
                     // write idea properties file
-                    currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
-                        StringBuilder(
-                            javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
-                                .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                                .replace("REPLACE_ME__VERSION", currentVersion)
-                                .replace("REPLACE_ME__CONFIG_PATH_CONFIG", currentMpsConfigPath.dir("config").toString())
-                                .replace("REPLACE_ME__CONFIG_PATH_SYSTEM", currentMpsConfigPath.dir("system").toString())
-                                .replace("REPLACE_ME__CONFIG_PATH_SCRATCH", currentMpsConfigPath.dir("scratch").toString())
-                                .replace("REPLACE_ME__CONFIG_PATH_PLUGINS", currentMpsConfigPath.dir("plugins").toString())
-                                .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
-                        )
-                            // add all user arguments
-                            .append(extraIdeaArgs.get().joinToString("\n")).toString()
-                    )
+                    writeIdeaFilePOSIX(currentMpsConfigPath, currentDate, currentVersion)
 
                     // sometimes when we obtain MPS via gradle, the sh file is missing +x. These calls return false if they don't work
                     mpsPath.dir("bin/mps.sh").get().asFile.setExecutable(true)
                     mpsPath.file("bin/linux/fsnotifier").get().asFile.setExecutable(true)
                     mpsPath.file("bin/linux/restart.py").get().asFile.setExecutable(true)
 
-                    // write startup file
-                    val shFileName = currentConfigPath.file(
-                        MessageFormat.format(
-                            Constants.MPS_RUN_SCRIPT_LINUX_FILENAME,
-                            currentEnvironmentName
-                        )
+                    writeStartScriptPOSIX(
+                        currentConfigPath,
+                        currentEnvironmentName,
+                        currentDate,
+                        currentVersion,
+                        currentMpsConfigPath,
+                        currentMpsPath,
+                        currentOs.toString(),
+                        Constants.MPS_RUN_SCRIPT_LINUX_FILENAME,
+                        Constants.MPS_RUN_SCRIPT_LINUX_TEMPLATE_PATH
                     )
-
-                    shFileName.asFile.writeText(
-                        javaClass.getResource(Constants.MPS_RUN_SCRIPT_LINUX_TEMPLATE_PATH)!!.readText()
-                            .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                            .replace("REPLACE_ME__VERSION", currentVersion)
-                            .replace("REPLACE_ME__CONFIG_PATH", currentConfigPath.toString())
-                            .replace("REPLACE_ME__CONFIG_MPS_PATH", currentMpsConfigPath.toString())
-                            .replace("REPLACE_ME__MPS_PATH", currentMpsPath)
-                            .replace("REPLACE_ME__CONFIG_TMUX_SESSION_NAME", currentEnvironmentName)
-                    )
-                    shFileName.asFile.setExecutable(true)
                 }
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////
                 Utils.OS.WINDOWS -> {
-                    logger.warn("Generating win start scripts for $currentEnvironmentName ...")
+                    logger.warn("Generating WIN start scripts for $currentEnvironmentName ...")
 
                     // TODO: how to handle generic MPS distributions?
 //                    mpsBasePath.dir("bin/win/*").get().asFile.copyRecursively()
@@ -226,10 +205,22 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                             javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
                                 .replace("REPLACE_ME__GENERATION_DATE", currentDate)
                                 .replace("REPLACE_ME__VERSION", currentVersion)
-                                .replace("REPLACE_ME__CONFIG_PATH_CONFIG", currentMpsConfigPath.dir("config").toString())
-                                .replace("REPLACE_ME__CONFIG_PATH_SYSTEM", currentMpsConfigPath.dir("system").toString())
-                                .replace("REPLACE_ME__CONFIG_PATH_SCRATCH", currentMpsConfigPath.dir("scratch").toString())
-                                .replace("REPLACE_ME__CONFIG_PATH_PLUGINS", currentMpsConfigPath.dir("plugins").toString())
+                                .replace(
+                                    "REPLACE_ME__CONFIG_PATH_CONFIG",
+                                    currentMpsConfigPath.dir("config").toString()
+                                )
+                                .replace(
+                                    "REPLACE_ME__CONFIG_PATH_SYSTEM",
+                                    currentMpsConfigPath.dir("system").toString()
+                                )
+                                .replace(
+                                    "REPLACE_ME__CONFIG_PATH_SCRATCH",
+                                    currentMpsConfigPath.dir("scratch").toString()
+                                )
+                                .replace(
+                                    "REPLACE_ME__CONFIG_PATH_PLUGINS",
+                                    currentMpsConfigPath.dir("plugins").toString()
+                                )
                                 .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
                                 .replace("\\", "\\\\")
                         )
@@ -241,6 +232,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     val batFileName = currentConfigPath.file(
                         MessageFormat.format(
                             Constants.MPS_RUN_SCRIPT_WIN_FILENAME,
+                            currentOs.toString(),
                             currentEnvironmentName
                         )
                     )
@@ -256,11 +248,86 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 }
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////
-                Utils.OS.MAC -> logger.error("Environment ${environmentName.get()}: Generation of OSX startup scripts not implemented yet") // TODO
+                Utils.OS.MAC -> {
+                    logger.warn("Generating OSX start scripts for $currentEnvironmentName ...")
+
+                    // write idea properties file
+                    writeIdeaFilePOSIX(currentMpsConfigPath, currentDate, currentVersion)
+
+                    writeStartScriptPOSIX(
+                        currentConfigPath,
+                        currentEnvironmentName,
+                        currentDate,
+                        currentVersion,
+                        currentMpsConfigPath,
+                        currentMpsPath,
+                        currentOs.toString(),
+                        Constants.MPS_RUN_SCRIPT_MAC_FILENAME,
+                        Constants.MPS_RUN_SCRIPT_MAC_TEMPLATE_PATH
+                    )
+                }
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////
-                Utils.OS.OTHER -> logger.error("Environment ${environmentName.get()} Generation: Only Linux/Win/OSX are supported.")
+                Utils.OS.OTHER -> logUnsupportedOs()
+                null -> logUnsupportedOs()
             }
         }
+    }
+
+    private fun logUnsupportedOs() {
+        logger.error("Environment ${environmentName.get()} Generation: Only Linux/Win/OSX are supported.")
+    }
+
+    private fun writeStartScriptPOSIX(
+        currentConfigPath: Directory,
+        currentEnvironmentName: String,
+        currentDate: String,
+        currentVersion: String,
+        currentMpsConfigPath: Directory,
+        currentMpsPath: String,
+        osType: String,
+        filename: String,
+        templatePath: String,
+    ) {
+        // write startup file
+        val shFileName = currentConfigPath.file(
+            MessageFormat.format(
+                filename,
+                osType,
+                currentEnvironmentName
+            )
+        )
+
+        shFileName.asFile.writeText(
+            javaClass.getResource(templatePath)!!.readText()
+                .replace("REPLACE_ME__GENERATION_DATE", currentDate)
+                .replace("REPLACE_ME__VERSION", currentVersion)
+                .replace("REPLACE_ME__CONFIG_PATH", currentConfigPath.toString())
+                .replace("REPLACE_ME__CONFIG_MPS_PATH", currentMpsConfigPath.toString())
+                .replace("REPLACE_ME__MPS_PATH", currentMpsPath)
+                .replace("REPLACE_ME__CONFIG_TMUX_SESSION_NAME", currentEnvironmentName)
+        )
+        shFileName.asFile.setExecutable(true)
+    }
+
+    private fun writeIdeaFilePOSIX(
+        currentMpsConfigPath: Directory,
+        currentDate: String,
+        currentVersion: String
+    ) {
+        currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
+            StringBuilder(
+                javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
+                    .replace("REPLACE_ME__GENERATION_DATE", currentDate)
+                    .replace("REPLACE_ME__VERSION", currentVersion)
+                    .replace("REPLACE_ME__CONFIG_PATH_CONFIG", currentMpsConfigPath.dir("config").toString())
+                    .replace("REPLACE_ME__CONFIG_PATH_SYSTEM", currentMpsConfigPath.dir("system").toString())
+                    .replace("REPLACE_ME__CONFIG_PATH_SCRATCH", currentMpsConfigPath.dir("scratch").toString())
+                    .replace("REPLACE_ME__CONFIG_PATH_PLUGINS", currentMpsConfigPath.dir("plugins").toString())
+                    .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
+            )
+                // add all user arguments
+                .append(extraIdeaArgs.get().joinToString("\n")).toString()
+        )
     }
 }
