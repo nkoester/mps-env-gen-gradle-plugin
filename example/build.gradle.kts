@@ -2,7 +2,7 @@ import de.itemis.mps.Utils
 import kotlin.io.path.Path
 
 plugins {
-    id("de.itemis.mps.environment-generator") version "1.1+"
+    id("de.itemis.mps.environment-generator") version "1.0+"
 }
 
 repositories {
@@ -138,4 +138,9 @@ mpsEnvironments {
             //)
         }
     }
+}
+
+val doAll by tasks.registering {
+    dependsOn(setup)
+    dependsOn("generateMpsEnvironmentAll")
 }

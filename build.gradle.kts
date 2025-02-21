@@ -9,7 +9,7 @@ kotlin {
 }
 
 group = "de.itemis.mps"
-version = "1.1-SNAPSHOT"
+version = "1.0-SNAPSHOT"
 
 repositories {
     maven(url = "https://artifacts.itemis.cloud/repository/maven-mps")
@@ -26,7 +26,6 @@ gradlePlugin {
     val modelSync by plugins.creating {
         id = "de.itemis.mps.environment-generator"
         implementationClass = "de.itemis.mps.MpsEnvironmentGenerationPlugin"
-
     }
 }
 
