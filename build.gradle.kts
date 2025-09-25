@@ -3,13 +3,19 @@ plugins {
     alias(libs.plugins.maven.publish)
     `java-gradle-plugin`
     `kotlin-dsl`
+    `jvm-test-suite`
 }
+
 kotlin {
     jvmToolchain(17)
 }
 
+java {
+    withSourcesJar()
+}
+
 group = "de.itemis.mps"
-version = "1.0-SNAPSHOT"
+version = "0.1-SNAPSHOT"
 
 repositories {
     maven(url = "https://artifacts.itemis.cloud/repository/maven-mps")
@@ -19,14 +25,20 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.0")
+//    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.20")
 }
 
 gradlePlugin {
-    val modelSync by plugins.creating {
-        id = "de.itemis.mps.environment-generator"
-        implementationClass = "de.itemis.mps.MpsEnvironmentGenerationPlugin"
-    }
+        plugins.create("lolwat") {
+            id = "de.itemis.mps.mps-env-gen-gradle-plugin"
+            displayName = "Plugin to generate isolated MPS configurations and run environments"
+            description = "A plugin that allows you run your MPS project in isolated environments. Works for Linux/Windows/OSX."
+            tags = listOf("mps", "environment", "generation")
+            implementationClass = "de.itemis.mps.MpsEnvironmentGenerationPlugin"
+        }
 }
 
 // write the version to the MANIFEST
@@ -37,6 +49,7 @@ tasks.jar {
 }
 
 tasks.test {
+    maxParallelForks = 3
     useJUnitPlatform()
 }
 

@@ -1,5 +1,8 @@
 # MPS Environment Generation Gradle Plugin
- 
+
+❗❗ This plugin is work in progress and not yet released or published ❗❗
+
+
 A small Gradle plugin which allows you to define isolated MPS environments.
 Environment are self-contained and can consequently be started in parallel.
 

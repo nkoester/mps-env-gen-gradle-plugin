@@ -10,6 +10,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val settings: MpsConfigurationGenerationSettings = project.extensions.create("mpsEnvironments", MpsConfigurationGenerationSettings::class.java)
 
+        // we have to run after our build script was evaluated
         project.afterEvaluate {
             println("Configuring new task(s) for environment(s) ${settings.environmentList.map { it.environmentName }}")
 
@@ -45,6 +46,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     xms.set(leEnvironment.mpsSettings.xms)
                     xmx.set(leEnvironment.mpsSettings.xmx)
                     ratioValue.set(leEnvironment.mpsSettings.ratio)
+                    httpPort.set(leEnvironment.mpsSettings.httpPort)
                     extraVmArgs.set(leEnvironment.mpsSettings.extraVmmArgs)
                     debugEnable.set(leEnvironment.mpsSettings.debugEnabled)
                     debugPort.set(leEnvironment.mpsSettings.debugPort)

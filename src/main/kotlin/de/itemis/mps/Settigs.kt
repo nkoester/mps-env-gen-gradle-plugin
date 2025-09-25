@@ -60,6 +60,8 @@ class MpsSettings(val project: Project) {
     val ratio: Property<Int> = project.objects.property<Int>().convention(4)
     val lightTheme: Property<Boolean> = project.objects.property<Boolean>().convention(true)
 
+    val httpPort: Property<Int> = project.objects.property<Int>().convention(63320)
+
     val debugEnabled: Property<Boolean> = project.objects.property<Boolean>().convention(false)
     val debugPort: Property<Int> = project.objects.property<Int>().convention(5071)
     val debugSuspend: Property<Boolean> = project.objects.property<Boolean>().convention(false)

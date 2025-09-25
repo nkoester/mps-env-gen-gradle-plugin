@@ -2,7 +2,7 @@ import de.itemis.mps.Utils
 import kotlin.io.path.Path
 
 plugins {
-    id("de.itemis.mps.environment-generator") version "1.0+"
+    id("de.itemis.mps.mps-env-gen-gradle-plugin") version "0.1-SNAPSHOT"
 }
 
 repositories {

@@ -50,6 +50,9 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     val ratioValue: Property<Int> = project.objects.property<Int>()
 
     @get:Input
+    val httpPort: Property<Int> = project.objects.property<Int>()
+
+    @get:Input
     val extraVmArgs: ListProperty<String> = project.objects.listProperty<String>()
 
     @get:Input
@@ -69,7 +72,6 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     // TODO document assumptions:
     //  - generic MPS
     //  - downloaded via gradle extension
-    //  -
 
     // TODO:
     //  - overwrite on regen? avoids deleting 'changes' etc.
@@ -96,7 +98,6 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         GFileUtils.mkdirs(currentConfigPath.asFile)
         GFileUtils.mkdirs(currentMpsConfigPath.asFile)
 
-
         // write the README file
         currentConfigPath.file(Constants.README_FILENAME).asFile.writeText(
             MessageFormat.format(
@@ -116,6 +117,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     .replace("REPLACE_ME__XMX_VALUE", xmx.get())
                     .replace("REPLACE_ME__XMS_VALUE", xms.get())
                     .replace("REPLACE_ME__RATIO_VALUE", "${ratioValue.get()}")
+                    .replace("REPLACE_ME__RATIO_VALUE--", "${httpPort.get()}")
                     .replace("REPLACE_ME__DEBUGENABLE", if (debugEnable.get()) "" else "#")
                     .replace("REPLACE_ME__DEBUGPORT", "${debugPort.get()}")
                     .replace("REPLACE_ME__SUSPEND", if (debugSuspend.get()) "y" else "n")
