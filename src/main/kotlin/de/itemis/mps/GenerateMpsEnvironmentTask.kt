@@ -38,6 +38,9 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
     // vm args
     @get:Input
+    val disableModelCheckBeforeGeneration: Property<Boolean> = project.objects.property<Boolean>()
+
+    @get:Input
     val lightTheme: Property<Boolean> = project.objects.property<Boolean>()
 
     @get:Input
@@ -126,21 +129,41 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 .append(extraVmArgs.get().joinToString("\n")).toString()
         )
 
-        if (lightTheme.get()) {
-            val optionsPath = currentMpsConfigPath.dir("config/options")
-            GFileUtils.mkdirs(optionsPath.asFile)
-            currentMpsConfigPath.dir(optionsPath.toString()).file("laf.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/laf.xml")!!.readText()
-            )
-            currentMpsConfigPath.dir(optionsPath.toString()).file("colors.scheme.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/colors.scheme.xml")!!.readText()
+        val optionsPath = currentMpsConfigPath.dir("config/options")
+        GFileUtils.mkdirs(optionsPath.asFile)
+
+        if(disableModelCheckBeforeGeneration.get()){
+            currentMpsConfigPath.dir(optionsPath.toString()).file("generationSettings.xml").asFile.writeText(
+                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/generationSettings.xml")!!.readText()
             )
         }
 
+        if (lightTheme.get()) {
+            currentMpsConfigPath.dir(optionsPath.toString()).file("laf.xml").asFile.writeText(
+                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/laf.xml")!!.readText()
+                    .replace("LAF_LINE", "<laf class-name=\"com.intellij.ide.ui.laf.IntelliJLaf\" themeId=\"JetBrainsLightTheme\" />")
+
+            )
+            currentMpsConfigPath.dir(optionsPath.toString()).file("colors.scheme.xml").asFile.writeText(
+                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/colors.scheme.xml")!!.readText()
+                    .replace("COLOR_SCHEME_NAME", "IntelliJ Light")
+
+            )
+        } else {
+            currentMpsConfigPath.dir(optionsPath.toString()).file("laf.xml").asFile.writeText(
+                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/laf.xml")!!.readText()
+                    .replace("LAF_LINE", "<laf class-name=\"com.intellij.ide.ui.laf.darcula.DarculaLaf\" />")
+            )
+            currentMpsConfigPath.dir(optionsPath.toString()).file("colors.scheme.xml").asFile.writeText(
+                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/colors.scheme.xml")!!.readText()
+                    .replace("COLOR_SCHEME_NAME", "Darcula")
+            )
+        }
+
+
+
         // trust the mps project path
         if (true) {
-            val optionsPath = currentMpsConfigPath.dir("config/options")
-            GFileUtils.mkdirs(optionsPath.asFile)
             currentMpsConfigPath.dir(optionsPath.toString()).file("trusted-paths.xml").asFile.writeText(
                 javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/trusted-paths.xml")!!.readText()
                     .replace("PARENT_PATH_TO_TRUST", mpsProjectPath.get().dir("..").asFile.toString())
@@ -149,8 +172,6 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         }
         // automatically open project
         if (true) {
-            val optionsPath = currentMpsConfigPath.dir("config/options")
-            GFileUtils.mkdirs(optionsPath.asFile)
             currentMpsConfigPath.dir(optionsPath.toString()).file("recentProjects.xml").asFile.writeText(
                 javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/recentProjects.xml")!!.readText()
                     .replace("PATH_TO_PROJECT", mpsProjectPath.asFile.get().toString())
@@ -159,8 +180,6 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         }
         // disable tips on startup
         if (true) {
-            val optionsPath = currentMpsConfigPath.dir("config/options")
-            GFileUtils.mkdirs(optionsPath.asFile)
             currentMpsConfigPath.dir(optionsPath.toString()).file("ide.general.xml").asFile.writeText(
                 javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/ide.general.xml")!!.readText()
             )

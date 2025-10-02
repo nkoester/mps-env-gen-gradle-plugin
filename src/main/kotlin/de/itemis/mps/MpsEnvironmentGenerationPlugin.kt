@@ -42,6 +42,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     configBasePath.set(settings.targetPath)
 
                     mpsProjectPath.set(settings.mpsProjectPath)
+                    disableModelCheckBeforeGeneration.set(leEnvironment.mpsSettings.disableModelCheckBeforeGeneration)
                     lightTheme.set(leEnvironment.mpsSettings.lightTheme)
                     xms.set(leEnvironment.mpsSettings.xms)
                     xmx.set(leEnvironment.mpsSettings.xmx)

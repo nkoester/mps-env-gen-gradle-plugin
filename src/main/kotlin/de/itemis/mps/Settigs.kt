@@ -58,6 +58,7 @@ class MpsSettings(val project: Project) {
     val xms: Property<String> = project.objects.property<String>().convention("1024m")
     var xmx: Property<String> = project.objects.property<String>().convention("2048m")
     val ratio: Property<Int> = project.objects.property<Int>().convention(4)
+    val disableModelCheckBeforeGeneration: Property<Boolean> = project.objects.property<Boolean>().convention(true)
     val lightTheme: Property<Boolean> = project.objects.property<Boolean>().convention(true)
 
     val httpPort: Property<Int> = project.objects.property<Int>().convention(63320)

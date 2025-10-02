@@ -1,0 +1,5 @@
+<application>
+    <component name="GenerationSettings">
+        <option name="myCheckModelsBeforeGeneration" value="false" />
+    </component>
+</application>
