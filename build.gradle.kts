@@ -32,7 +32,7 @@ dependencies {
 }
 
 gradlePlugin {
-        plugins.create("lolwat") {
+        plugins.create("MpsEnvGenPlugin") {
             id = "de.itemis.mps.mps-env-gen-gradle-plugin"
             displayName = "Plugin to generate isolated MPS configurations and run environments"
             description = "A plugin that allows you run your MPS project in isolated environments. Works for Linux/Windows/OSX."

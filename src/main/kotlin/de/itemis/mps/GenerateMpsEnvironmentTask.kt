@@ -84,7 +84,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
         val currentEnvironmentName: String = environmentName.get()
         val currentDate: String = SimpleDateFormat("dd/M/yyyy hh:mm:ss").format(Calendar.getInstance().time).toString()
-        val currentVersion: String = GenerateMpsEnvironmentTask::class.java.getPackage().implementationVersion
+        val currentVersion: String = GenerateMpsEnvironmentTask::class.java.getPackage().implementationVersion ?: "unknown"
         val currentConfigPath = configBasePath.dir(environmentName).get()
         val currentMpsConfigPath = configBasePath.dir("${environmentName.get()}/mps").get()
         val currentMpsPath = mpsPath.get().toString()
@@ -116,7 +116,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
             StringBuilder(
                 javaClass.getResource(Constants.MPS_VMOPTIONS_TEMPLATE_PATH)!!.readText()
                     .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                    .replace("REPLACE_ME__VERSION", currentVersion)
+                    .replace("REPLACE_ME__VERSION", currentVersion+"")
                     .replace("REPLACE_ME__XMX_VALUE", xmx.get())
                     .replace("REPLACE_ME__XMS_VALUE", xms.get())
                     .replace("REPLACE_ME__RATIO_VALUE", "${ratioValue.get()}")
