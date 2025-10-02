@@ -1,3 +1,5 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
     kotlin(libs.plugins.jvm.gradle.get().pluginId) version libs.plugins.jvm.gradle.get().version.toString()
     alias(libs.plugins.maven.publish)
@@ -57,5 +59,34 @@ tasks.test {
 publishing {
     repositories {
         mavenLocal()
+        if(gitBranch() == "main") {
+            maven {
+                name = "itemisCloud"
+                url = uri("https://artifacts.itemis.cloud/repository/maven-mps-releases/")
+                if (project.hasProperty("artifacts.itemis.cloud.user") && project.hasProperty("artifacts.itemis.cloud.pw")) {
+                    credentials {
+                        username = project.findProperty("artifacts.itemis.cloud.user") as String?
+                        password = project.findProperty("artifacts.itemis.cloud.pw") as String?
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun gitBranch(): String {
+    return try {
+        val byteOut = ByteArrayOutputStream()
+        project.exec {
+            commandLine = "git rev-parse --abbrev-ref HEAD".split(" ")
+            standardOutput = byteOut
+        }
+        String(byteOut.toByteArray()).trim().also {
+            if (it == "HEAD")
+                logger.warn("Unable to determine current branch: Project is checked out with detached head!")
+        }
+    } catch (e: Exception) {
+        logger.warn("Unable to determine current branch: ${e.message}")
+        "Unknown Branch"
     }
 }
