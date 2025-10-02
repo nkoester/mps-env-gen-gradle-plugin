@@ -27,8 +27,8 @@ class FunctionalTest {
         GradleRunner.create().withProjectDir(testProjectDir).withPluginClasspath()
 
     private fun extractTestProject(to: File) {
-        val url = this.javaClass.classLoader.getResource("test-project")
-        val path = Paths.get(url.toURI())
+        val testProjectUrl = this.javaClass.classLoader.getResource("test-project")
+        val path = Paths.get(testProjectUrl!!.toURI())
         val files = Files.walk(path).filter { Files.isRegularFile(it) }.map { it.toFile() }.toList()
         files.forEach {
             val rel = path.relativize(it.toPath())
@@ -85,6 +85,36 @@ class FunctionalTest {
         assertTrue(File(testProjectDir, ".mpsconfig/Default/mps/mps64.vmoptions").exists())
     }
 
+    @Test
+    fun `writes multiple environments`() {
+        addMultipleEnvironments(buildFile)
+
+        // run the default task
+        val result = gradleRunner().withArguments(":generateMpsEnvironmentAll").build()
+
+        // check if task configuration actually runs
+        assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironmentAll")?.outcome)
+
+        // test for expected output
+        assertTrue(result.output.contains("Configuring new task(s) for environment(s) [Default, Second, Third]"))
+        assertTrue(File(testProjectDir, ".mpsconfig/Default").exists())
+        assertTrue(File(testProjectDir, ".mpsconfig/Default/mps/idea.properties").exists())
+        assertTrue(File(testProjectDir, ".mpsconfig/Default/mps/mps64.vmoptions").exists())
+
+        assertTrue(File(testProjectDir, ".mpsconfig/Second").exists())
+        assertTrue(File(testProjectDir, ".mpsconfig/Second/mps/idea.properties").exists())
+        assertTrue(File(testProjectDir, ".mpsconfig/Second/mps/mps64.vmoptions").exists())
+
+        assertTrue(File(testProjectDir, ".mpsconfig/Third").exists())
+        assertTrue(File(testProjectDir, ".mpsconfig/Third/mps/idea.properties").exists())
+        assertTrue(File(testProjectDir, ".mpsconfig/Third/mps/mps64.vmoptions").exists())
+    }
+
+    // test TODOs:
+    // - validate file content based on the given options (parameter round trip)
+    // - validate generated default parameter values
+    // - start MPS with a generated script
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // build file boilerplate
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -96,6 +126,21 @@ class FunctionalTest {
                         mpsProjectPath.set(Path("${mpsTestProjectPath.path}").toFile())
                         
                         environment("Default"){}
+                    }
+                """.trimIndent()
+        )
+    }
+
+    private fun addMultipleEnvironments(buildFile: File) {
+        buildFile.appendText(
+            """
+                    mpsEnvironments {
+                        mpsPath.set(Path(myMpsPath.toString()).toFile())
+                        mpsProjectPath.set(Path("${mpsTestProjectPath.path}").toFile())
+                        
+                        environment("Default"){}
+                        environment("Second"){}
+                        environment("Third"){}
                     }
                 """.trimIndent()
         )
