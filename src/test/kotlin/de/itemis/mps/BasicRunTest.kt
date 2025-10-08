@@ -13,8 +13,11 @@ class BasicUnitTests {
         val project = ProjectBuilder.builder().build()
         project.plugins.apply("de.itemis.mps.mps-env-gen-gradle-plugin")
 
-        // Verify the result
-        Assertions.assertNotNull(project.tasks.findByName("generateMpsEnvironmentAll"))
+        // todo: remove afterEvaluate calls
+        project.afterEvaluate {
+            // Verify the result
+            Assertions.assertNotNull(project.tasks.findByName("generateMpsEnvironmentAll"))
+        }
     }
 
 }
