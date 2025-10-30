@@ -21,6 +21,14 @@
 CURRENT_BASE_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 cd "${CURRENT_BASE_PATH}" || ( printf "Error: Unable to cd into base path\n" && exit 1 )
 
+# set the java path if given
+JAVA_HOME_CANDIDATE="REPLACE_ME__JAVA_HOME"
+if [ -d "${JAVA_HOME_CANDIDATE}" ]; then
+    export JAVA_HOME="${JAVA_HOME_CANDIDATE}"
+    export PATH="${JAVA_HOME}/bin:${PATH}"
+    printf "JAVA_HOME will be overwritten to \n    ${JAVA_HOME}\n\n"
+fi
+
 # the environment
 export _JAVA_AWT_WM_NONREPARENTING=1
 CONFIG_PATH="REPLACE_ME__CONFIG_PATH"
@@ -28,7 +36,7 @@ CONFIG_MPS_PATH="REPLACE_ME__CONFIG_MPS_PATH"
 MPS_PATH="REPLACE_ME__MPS_PATH"
 
 CONFIG_TMUX_SESSION_NAME="REPLACE_ME__CONFIG_TMUX_SESSION_NAME"
-CURRENT_IDEA_PATH=$(cat "${CURRENT_BASE_PATH}/idea.properties" | grep "idea.config.path" | cut -d "=" -f2)
+CURRENT_IDEA_PATH=$(cat "${CURRENT_BASE_PATH}/mps/idea.properties" | grep "idea.config.path" | cut -d "=" -f2)
 
 function testPaths {
     printf "Checking path 'tegrity ... "
@@ -101,6 +109,6 @@ else
     printf ' --> No/unknown argument %s given - startig MPS directly in this terminal\n' "${1}"
     printf '     Alternative arguments are: tmuxD, tmuxA, tmuxLD, and tmuxLA\n'
     printf ' (!)\n\n'
-    printf "Calling MPS via ... \n >>> MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh\n"
+    printf "Calling MPS via ... \n >>> MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh\n\n"
     MPS_PROPERTIES=${CONFIG_MPS_PATH}/idea.properties IDEA_VM_OPTIONS=${CONFIG_MPS_PATH}/mps64.vmoptions  ${MPS_PATH}/bin/mps.sh
 fi
