@@ -91,6 +91,7 @@ publishing {
 fun gitBranch(hash: Boolean = false): String {
     return try {
         val byteOut = ByteArrayOutputStream()
+        Runtime.getRuntime().exec("mycommand.sh")
         project.exec {
             val theCommandLine = when (hash) {
                 true -> "git rev-parse --short HEAD"
