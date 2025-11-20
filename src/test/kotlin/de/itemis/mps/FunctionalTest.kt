@@ -110,6 +110,26 @@ class FunctionalTest {
         assertTrue(File(testProjectDir, ".mpsconfig/Third/mps/mps64.vmoptions").exists())
     }
 
+
+    @Test
+    fun `can set java home`() {
+        // todo actually create the jbr folder
+        val jbrFolder = File(testProjectDir, "build/jbr")
+        jbrFolder.mkdirs()
+
+        addDEnvironmentBlockWithJavaHome(buildFile)
+
+        // run the default task
+        val result = gradleRunner().withArguments(":generateMpsEnvironmentAll").build()
+
+        // check if task configuration actually runs
+        assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironmentAll")?.outcome)
+        assertTrue(File(testProjectDir, ".mpsconfig/Default/startMPS_LINUX_Default.sh").exists())
+//        assertFalse(File(testProjectDir, ".mpsconfig/Default/startMPS_LINUX_Default.sh").readText().contains("JAVA_HOME_CANDIDATE=\"REPLACE_ME__JAVA_HOME\""))
+
+        //TODO: Check the generated files if the java home was set
+    }
+
     // test TODOs:
     // - validate file content based on the given options (parameter round trip)
     // - validate generated default parameter values
@@ -123,6 +143,20 @@ class FunctionalTest {
             """
                     mpsEnvironments {
                         mpsPath.set(Path(myMpsPath.toString()).toFile())
+                        mpsProjectPath.set(Path("${mpsTestProjectPath.path}").toFile())
+                        
+                        environment("Default"){}
+                    }
+                """.trimIndent()
+        )
+    }
+
+    private fun addDEnvironmentBlockWithJavaHome(buildFile: File) {
+        buildFile.appendText(
+            """
+                    mpsEnvironments {
+                        mpsPath.set(Path(myMpsPath.toString()).toFile())
+                        javaHome.set(Path(myJavaHome.toString()).toFile())
                         mpsProjectPath.set(Path("${mpsTestProjectPath.path}").toFile())
                         
                         environment("Default"){}
@@ -163,6 +197,7 @@ class FunctionalTest {
 
         val myMpsPath = Path(project.layout.buildDirectory.get().toString(), "mps")
         val myDependencyPath = Path(project.layout.buildDirectory.get().toString(), "dependencies")
+        val myJavaHome = Path(project.layout.buildDirectory.get().toString(), "jbr")
 
         val mps: Configuration by configurations.creating
         val mpsExtensions: Configuration by configurations.creating

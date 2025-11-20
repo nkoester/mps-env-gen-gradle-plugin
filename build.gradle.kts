@@ -17,7 +17,12 @@ java {
 }
 
 group = "de.itemis.mps"
-version = "0.1-SNAPSHOT"
+version = if (projectDir.resolve("version.txt").exists()){
+    projectDir.resolve("version.txt").readText().trim()
+} else {
+    gitBranch(true) + (if (!project.findProperty("ciBuild")?.toString().toBoolean()) "-SNAPSHOT" else "")
+}
+println("Building version: $version")
 
 repositories {
     maven(url = "https://artifacts.itemis.cloud/repository/maven-mps")
@@ -83,11 +88,15 @@ publishing {
     }
 }
 
-fun gitBranch(): String {
+fun gitBranch(hash: Boolean = false): String {
     return try {
         val byteOut = ByteArrayOutputStream()
         project.exec {
-            commandLine = "git rev-parse --abbrev-ref HEAD".split(" ")
+            val theCommandLine = when (hash) {
+                true -> "git rev-parse --short HEAD"
+                false -> "git rev-parse --abbrev-ref HEAD"
+            }
+            commandLine = theCommandLine.split(" ")
             standardOutput = byteOut
         }
         String(byteOut.toByteArray()).trim().also {
