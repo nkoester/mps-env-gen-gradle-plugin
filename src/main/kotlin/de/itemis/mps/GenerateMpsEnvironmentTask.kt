@@ -8,6 +8,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.listProperty
@@ -16,6 +17,7 @@ import org.gradle.util.internal.GFileUtils
 import java.text.MessageFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.text.replace
 
 @Incubating
 abstract class GenerateMpsEnvironmentTask : DefaultTask() {
@@ -32,6 +34,10 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
     @get:InputDirectory
     val mpsPath: DirectoryProperty = project.objects.directoryProperty()
+
+    @get:InputDirectory
+    @Optional
+    val javaHome: DirectoryProperty = project.objects.directoryProperty()
 
     @get:InputDirectory
     val mpsProjectPath: DirectoryProperty = project.objects.directoryProperty()
@@ -88,13 +94,14 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         val currentConfigPath = configBasePath.dir(environmentName).get()
         val currentMpsConfigPath = configBasePath.dir("${environmentName.get()}/mps").get()
         val currentMpsPath = mpsPath.get().toString()
+        val currentJavaHome = if (javaHome.isPresent) javaHome.get().toString() else ""
 
         println("---------------------------------")
         println("Running env generator version $currentVersion")
         println("Current dat: $currentDate")
         println("Writing start scripts to ${currentConfigPath.asFile} ")
         println("Writing MPS config files to ${currentMpsConfigPath.asFile} ")
-        println("OS: $osToGenerate")
+        println("OS: ${osToGenerate.get()}")
         println("---------------------------------")
 
         // target to where this config is written
@@ -207,6 +214,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                         currentVersion,
                         currentMpsConfigPath,
                         currentMpsPath,
+                        currentJavaHome,
                         currentOs.toString(),
                         Constants.MPS_RUN_SCRIPT_LINUX_FILENAME,
                         Constants.MPS_RUN_SCRIPT_LINUX_TEMPLATE_PATH
@@ -216,9 +224,6 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 /////////////////////////////////////////////////////////////////////////////////////////////////
                 Utils.OS.WINDOWS -> {
                     logger.warn("Generating WIN start scripts for $currentEnvironmentName ...")
-
-                    // TODO: how to handle generic MPS distributions?
-//                    mpsBasePath.dir("bin/win/*").get().asFile.copyRecursively()
 
                     // write idea properties file
                     currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
@@ -263,7 +268,9 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                             .replace("REPLACE_ME__GENERATION_DATE", currentDate)
                             .replace("REPLACE_ME__CONFIG_MPS_PATH", currentMpsConfigPath.toString())
                             .replace("REPLACE_ME__MPS_PATH", currentMpsPath)
-                            .replace("REPLACE_ME__EVIRONMENT_NAME", environmentName.get())
+                            .run{ if (!currentJavaHome.isNullOrEmpty()){
+                                replace("REPLACE_ME__JAVA_HOME", currentJavaHome)
+                            } else toString() }
                     )
                     batFileName.asFile.setExecutable(true)
                 }
@@ -282,6 +289,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                         currentVersion,
                         currentMpsConfigPath,
                         currentMpsPath,
+                        currentJavaHome,
                         currentOs.toString(),
                         Constants.MPS_RUN_SCRIPT_MAC_FILENAME,
                         Constants.MPS_RUN_SCRIPT_MAC_TEMPLATE_PATH
@@ -306,6 +314,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         currentVersion: String,
         currentMpsConfigPath: Directory,
         currentMpsPath: String,
+        currentJavaHome: String,
         osType: String,
         filename: String,
         templatePath: String,
@@ -327,6 +336,9 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 .replace("REPLACE_ME__CONFIG_MPS_PATH", currentMpsConfigPath.toString())
                 .replace("REPLACE_ME__MPS_PATH", currentMpsPath)
                 .replace("REPLACE_ME__CONFIG_TMUX_SESSION_NAME", currentEnvironmentName)
+                .run{ if (!currentJavaHome.isNullOrEmpty()){
+                    replace("REPLACE_ME__JAVA_HOME", currentJavaHome)
+                } else toString() }
         )
         shFileName.asFile.setExecutable(true)
     }

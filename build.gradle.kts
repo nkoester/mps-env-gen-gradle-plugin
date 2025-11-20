@@ -34,13 +34,22 @@ dependencies {
 }
 
 gradlePlugin {
-        plugins.create("MpsEnvGenPlugin") {
+    plugins {
+        create("MpsEnvGenPlugin") {
             id = "de.itemis.mps.mps-env-gen-gradle-plugin"
             displayName = "Plugin to generate isolated MPS configurations and run environments"
             description = "A plugin that allows you run your MPS project in isolated environments. Works for Linux/Windows/OSX."
             tags = listOf("mps", "environment", "generation")
             implementationClass = "de.itemis.mps.MpsEnvironmentGenerationPlugin"
         }
+        register("artifactTransforms") {
+            id = "de.itemis.mps.artifact-transforms"
+            implementationClass = "de.itemis.mps.artifactTransform.ArtifactTransforms"
+            displayName = "Runnable MPS Artifact Transforms"
+            description = "Artifact transforms that help share a runnable MPS distribution among multiple projects"
+            tags.set(listOf("jetbrainsMps", "artifactTransform"))
+        }
+    }
 }
 
 // write the version to the MANIFEST
