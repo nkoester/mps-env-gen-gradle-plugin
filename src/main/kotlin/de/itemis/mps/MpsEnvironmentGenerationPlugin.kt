@@ -20,11 +20,11 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
         val settingsExtension: MpsConfigurationGenerationSettings = project.extensions.create("mpsEnvironments", MpsConfigurationGenerationSettings::class.java)
         // we have to run after our build script was evaluated
         project.afterEvaluate {
-            println("Configuring new task(s) for environment(s) ${settingsExtension.environmentList.map { it.environmentName }}")
+            logger.lifecycle("Configuring new task(s) for environment(s) ${settingsExtension.environmentList.map { it.environmentName }}")
 
             val allGeneratedTasks = mutableListOf<GenerateMpsEnvironmentTask>()
             settingsExtension.environmentList.forEach { leEnvironment ->
-                val taskName = "generateMpsEnvironment" + leEnvironment.environmentName.substring(0, 1)
+                val taskName = "generateMpsEnvironment-" + leEnvironment.environmentName.substring(0, 1)
                     .uppercase() + leEnvironment.environmentName.substring(1)
 
                 val newTask = project.tasks.register(taskName, GenerateMpsEnvironmentTask::class.java) {
@@ -68,6 +68,8 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     debugSuspend.set(leEnvironment.mpsSettings.debugSuspend)
 
                     extraIdeaArgs.set(leEnvironment.ideaSettings.extraIdeaArgs)
+
+                    logger.lifecycle("$taskName configured")
 
                 }
                 allGeneratedTasks.add(newTask.get())

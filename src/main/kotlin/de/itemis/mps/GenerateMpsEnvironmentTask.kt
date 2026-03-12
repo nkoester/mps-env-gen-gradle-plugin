@@ -96,13 +96,11 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         val currentMpsPath = mpsPath.get().toString()
         val currentJavaHome = if (javaHome.isPresent) javaHome.get().toString() else ""
 
-        println("---------------------------------")
-        println("Running env generator version $currentVersion")
-        println("Current dat: $currentDate")
-        println("Writing start scripts to ${currentConfigPath.asFile} ")
-        println("Writing MPS config files to ${currentMpsConfigPath.asFile} ")
-        println("OS: ${osToGenerate.get()}")
-        println("---------------------------------")
+        logger.lifecycle("Running env generator version $currentVersion")
+        logger.info("Current date: $currentDate")
+        logger.info("Writing start scripts to ${currentConfigPath.asFile} ")
+        logger.info("Writing MPS config files to ${currentMpsConfigPath.asFile} ")
+        logger.info("OS: ${osToGenerate.get()}")
 
         // target to where this config is written
         GFileUtils.mkdirs(currentConfigPath.asFile)
@@ -197,7 +195,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
             when (currentOs) {
                 /////////////////////////////////////////////////////////////////////////////////////////////////
                 Utils.OS.LINUX -> {
-                    logger.warn("Generating linux start scripts for $currentEnvironmentName ...")
+                    logger.lifecycle("Generating linux start scripts for $currentEnvironmentName ...")
 
                     // write idea properties file
                     writeIdeaFilePOSIX(currentMpsConfigPath, currentDate, currentVersion)
@@ -223,7 +221,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////
                 Utils.OS.WINDOWS -> {
-                    logger.warn("Generating WIN start scripts for $currentEnvironmentName ...")
+                    logger.lifecycle("Generating WIN start scripts for $currentEnvironmentName ...")
 
                     // write idea properties file
                     currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
@@ -277,7 +275,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////
                 Utils.OS.MAC -> {
-                    logger.warn("Generating OSX start scripts for $currentEnvironmentName ...")
+                    logger.lifecycle("Generating OSX start scripts for $currentEnvironmentName ...")
 
                     // write idea properties file
                     writeIdeaFilePOSIX(currentMpsConfigPath, currentDate, currentVersion)

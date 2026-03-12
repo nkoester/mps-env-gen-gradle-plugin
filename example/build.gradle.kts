@@ -2,7 +2,7 @@ import de.itemis.mps.Utils
 import kotlin.io.path.Path
 
 plugins {
-    id("de.itemis.mps.mps-env-gen-gradle-plugin") version "0.1-SNAPSHOT"
+    alias(libs.plugins.mps.env.gen)
 }
 
 repositories {
@@ -18,8 +18,8 @@ val mps: Configuration by configurations.creating
 val mpsExtensions: Configuration by configurations.creating
 
 dependencies {
-    mps("com.jetbrains:mps:2022.2.4")
-    mpsExtensions("de.itemis.mps:extensions:2022.2.2988.736f389")
+    mps(libs.mps)
+    mpsExtensions(libs.mps.extensions)
 }
 
 val extractMps by tasks.registering(Copy::class) {
@@ -40,34 +40,16 @@ val setup by tasks.registering {
 
 
 
-// TODO: JDK selection
+
 
 val pathToYourMPSInstallation = Path("/vol/mps/MPS-2022.2.4-linux/").toFile()
-//val pathToYourMPSInstallation = Path("C:/Users/nkoester/Desktop/mps").toFile()
 
-
-// the environments block allows you to define your desired
-// MPS environments you want to create
 mpsEnvironments {
-    // mpsBasePath - home of the MPS you want to use for the environments
-    //               (no default; can be overwritten in the environments by
-    //               setting mpsPathLocal)
     mpsPath.set(pathToYourMPSInstallation)
-    //               if you get your MPS via gradle, you can use it!
-//    mpsPath.set(project.layout.buildDirectory.dir("mps"))
-
-    // targetPath - refers to the folder where environments are generated into.
-    //              There are no checks and files will be written to the given path.
-    //              (default: 'project.layout.projectDirectory.dir(".mpsconfig")')
-    targetPath.set(project.layout.projectDirectory.dir(".mpsconfig"))
-
-    // mpsProjectPath - the path where your MPS project is at (no default)
-    //                  (no default; can be overwritten in each environment by
-    //                  setting mpsProjectPathLocal)
     mpsProjectPath.set(project.layout.projectDirectory.dir("mps-project"))
+    environment("0-default"){
 
-    // most simple way to create a new environment named 'default' for the OS you run
-    environment("0-default"){}
+    }
 
     environment("1-special") {
         // osToGenerate - specifies for which OS to generate a startup script
@@ -83,8 +65,10 @@ mpsEnvironments {
 
         // set certain MPS specific settings you would normally set in the mps64.vmoptions file
         mpsSettings {
+            httpPort =9292
+
             // lightTheme - if you really want to, you can use the dark theme (default: true)
-            lightTheme.set(false)
+            lightTheme.set(true)
             // set some important settings for MPS:
             // xms   - 1024m
             // xmx   - 2048m
@@ -115,6 +99,7 @@ mpsEnvironments {
 
     environment("2-debug") {
         mpsSettings {
+            httpPort =9292
             // debugEnabled - enable debugging for this environment
             //                (default: false)
             debugEnabled = true

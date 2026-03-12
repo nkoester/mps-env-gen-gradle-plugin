@@ -1,4 +1,6 @@
+import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
+
 
 plugins {
     kotlin(libs.plugins.jvm.gradle.get().pluginId) version libs.plugins.jvm.gradle.get().version.toString()
@@ -22,7 +24,8 @@ version = if (projectDir.resolve("version.txt").exists()){
 } else {
     gitBranch(true) + (if (!project.findProperty("ciBuild")?.toString().toBoolean()) "-SNAPSHOT" else "")
 }
-println("Building version: $version")
+
+logger.lifecycle("Building version: $version")
 
 repositories {
     maven(url = "https://artifacts.itemis.cloud/repository/maven-mps")
@@ -46,13 +49,6 @@ gradlePlugin {
             description = "A plugin that allows you run your MPS project in isolated environments. Works for Linux/Windows/OSX."
             tags = listOf("mps", "environment", "generation")
             implementationClass = "de.itemis.mps.MpsEnvironmentGenerationPlugin"
-        }
-        register("artifactTransforms") {
-            id = "de.itemis.mps.artifact-transforms"
-            implementationClass = "de.itemis.mps.artifactTransform.ArtifactTransforms"
-            displayName = "Runnable MPS Artifact Transforms"
-            description = "Artifact transforms that help share a runnable MPS distribution among multiple projects"
-            tags.set(listOf("jetbrainsMps", "artifactTransform"))
         }
     }
 }
@@ -91,7 +87,6 @@ publishing {
 fun gitBranch(hash: Boolean = false): String {
     return try {
         val byteOut = ByteArrayOutputStream()
-        Runtime.getRuntime().exec("mycommand.sh")
         project.exec {
             val theCommandLine = when (hash) {
                 true -> "git rev-parse --short HEAD"
@@ -100,7 +95,8 @@ fun gitBranch(hash: Boolean = false): String {
             commandLine = theCommandLine.split(" ")
             standardOutput = byteOut
         }
-        String(byteOut.toByteArray()).trim().also {
+        String(byteOut.toByteArray()).trim().also { if (it == "main") return "main" }
+            .also {
             if (it == "HEAD")
                 logger.warn("Unable to determine current branch: Project is checked out with detached head!")
         }
