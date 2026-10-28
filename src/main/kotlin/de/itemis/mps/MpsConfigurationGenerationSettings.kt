@@ -30,6 +30,7 @@ open class MpsConfigurationGenerationSettings @Inject constructor(val project: P
     val environmentList: MutableSet<MpsEnvironment> = mutableSetOf()
 
     fun environment(environmentName : String, action: Action<MpsEnvironment>) {
+        require(environmentName.isNotBlank()) { "Environment name must not be blank." }
         require(!environmentList.any { it.environmentName == environmentName }){
             "Environment with name '$environmentName' already exists. Environment names must be distinct."
         }

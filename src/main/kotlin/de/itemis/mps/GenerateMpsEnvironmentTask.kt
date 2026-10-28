@@ -79,8 +79,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
 
 
     // TODO document assumptions:
-    //  - generic MPS
-    //  - downloaded via gradle extension
+    //  - runnable MPS (!)
 
     // TODO:
     //  - overwrite on regen? avoids deleting 'changes' etc.
@@ -89,7 +88,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     fun action() {
 
         val currentEnvironmentName: String = environmentName.get()
-        val currentDate: String = SimpleDateFormat("dd/M/yyyy hh:mm:ss").format(Calendar.getInstance().time).toString()
+        val currentDate: String = SimpleDateFormat("dd/M/yyyy HH:mm:ss").format(Calendar.getInstance().time).toString()
         val currentVersion: String = GenerateMpsEnvironmentTask::class.java.getPackage().implementationVersion ?: "unknown"
         val currentConfigPath = configBasePath.dir(environmentName).get()
         val currentMpsConfigPath = configBasePath.dir("${environmentName.get()}/mps").get()
@@ -109,23 +108,23 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         // write the README file
         currentConfigPath.file(Constants.README_FILENAME).asFile.writeText(
             MessageFormat.format(
-                javaClass.getResource(Constants.README_TEMPLATE_PATH)!!.readText(),
-                osToGenerate.get().joinToString { " - ${it.name}\n" },
+                readTemplate(Constants.README_TEMPLATE_PATH),
+                osToGenerate.get().joinToString(separator = "") { " - ${it.name}\n" },
                 currentDate,
-                GenerateMpsEnvironmentTask::class.java.getPackage().implementationVersion
+                currentVersion
             )
         )
 
         // write MPS vm options file
         currentMpsConfigPath.file(Constants.MPS_VMOPTIONS_FILENAME).asFile.writeText(
             StringBuilder(
-                javaClass.getResource(Constants.MPS_VMOPTIONS_TEMPLATE_PATH)!!.readText()
+                readTemplate(Constants.MPS_VMOPTIONS_TEMPLATE_PATH)
                     .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                    .replace("REPLACE_ME__VERSION", currentVersion+"")
+                    .replace("REPLACE_ME__VERSION", currentVersion)
                     .replace("REPLACE_ME__XMX_VALUE", xmx.get())
                     .replace("REPLACE_ME__XMS_VALUE", xms.get())
                     .replace("REPLACE_ME__RATIO_VALUE", "${ratioValue.get()}")
-                    .replace("REPLACE_ME__RATIO_VALUE--", "${httpPort.get()}")
+                    .replace("REPLACE_ME__HTTP_PORT", "${httpPort.get()}")
                     .replace("REPLACE_ME__DEBUGENABLE", if (debugEnable.get()) "" else "#")
                     .replace("REPLACE_ME__DEBUGPORT", "${debugPort.get()}")
                     .replace("REPLACE_ME__SUSPEND", if (debugSuspend.get()) "y" else "n")
@@ -137,58 +136,48 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         val optionsPath = currentMpsConfigPath.dir("config/options")
         GFileUtils.mkdirs(optionsPath.asFile)
 
-        if(disableModelCheckBeforeGeneration.get()){
-            currentMpsConfigPath.dir(optionsPath.toString()).file("generationSettings.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/generationSettings.xml")!!.readText()
+        if (disableModelCheckBeforeGeneration.get()) {
+            optionsPath.file("generationSettings.xml").asFile.writeText(
+                readTemplate("${Constants.MPS_CONFIG_TEMPLATE_PATH}/generationSettings.xml")
             )
         }
 
-        if (lightTheme.get()) {
-            currentMpsConfigPath.dir(optionsPath.toString()).file("laf.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/laf.xml")!!.readText()
-                    .replace("LAF_LINE", "<laf class-name=\"com.intellij.ide.ui.laf.IntelliJLaf\" themeId=\"JetBrainsLightTheme\" />")
-
-            )
-            currentMpsConfigPath.dir(optionsPath.toString()).file("colors.scheme.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/colors.scheme.xml")!!.readText()
-                    .replace("COLOR_SCHEME_NAME", "IntelliJ Light")
-
-            )
+        val (lafLine, colorSchemeName) = if (lightTheme.get()) {
+            "<laf class-name=\"com.intellij.ide.ui.laf.IntelliJLaf\" themeId=\"JetBrainsLightTheme\" />" to "IntelliJ Light"
         } else {
-            currentMpsConfigPath.dir(optionsPath.toString()).file("laf.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/laf.xml")!!.readText()
-                    .replace("LAF_LINE", "<laf class-name=\"com.intellij.ide.ui.laf.darcula.DarculaLaf\" />")
-            )
-            currentMpsConfigPath.dir(optionsPath.toString()).file("colors.scheme.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/colors.scheme.xml")!!.readText()
-                    .replace("COLOR_SCHEME_NAME", "Darcula")
-            )
+            "<laf class-name=\"com.intellij.ide.ui.laf.darcula.DarculaLaf\" />" to "Darcula"
         }
-
-
+        optionsPath.file("laf.xml").asFile.writeText(
+            readTemplate("${Constants.MPS_CONFIG_TEMPLATE_PATH}/laf.xml").replace("LAF_LINE", lafLine)
+        )
+        optionsPath.file("colors.scheme.xml").asFile.writeText(
+            readTemplate("${Constants.MPS_CONFIG_TEMPLATE_PATH}/colors.scheme.xml").replace("COLOR_SCHEME_NAME", colorSchemeName)
+        )
 
         // trust the mps project path
-        if (true) {
-            currentMpsConfigPath.dir(optionsPath.toString()).file("trusted-paths.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/trusted-paths.xml")!!.readText()
-                    .replace("PARENT_PATH_TO_TRUST", mpsProjectPath.get().dir("..").asFile.toString())
-                    .replace("PATH_TO_TRUST", mpsProjectPath.asFile.get().toString())
-            )
-        }
-        // automatically open project
-        if (true) {
-            currentMpsConfigPath.dir(optionsPath.toString()).file("recentProjects.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/recentProjects.xml")!!.readText()
-                    .replace("PATH_TO_PROJECT", mpsProjectPath.asFile.get().toString())
-                    .replace("PROJECT_TITLE", mpsProjectPath.file(".mps/.name").get().asFile.readText())
-            )
-        }
+        val projectDir = mpsProjectPath.get().asFile
+        optionsPath.file("trusted-paths.xml").asFile.writeText(
+            readTemplate("${Constants.MPS_CONFIG_TEMPLATE_PATH}/trusted-paths.xml")
+                .replace("PARENT_PATH_TO_TRUST", projectDir.absoluteFile.parentFile?.toString() ?: projectDir.toString())
+                .replace("PATH_TO_TRUST", projectDir.toString())
+        )
+
+        // automatically open project; fall back to the folder name if the project has no .mps/.name
+        val projectNameFile = projectDir.resolve(".mps/.name")
+        val projectTitle = if (projectNameFile.isFile) projectNameFile.readText().trim() else projectDir.name
+        optionsPath.file("recentProjects.xml").asFile.writeText(
+            readTemplate("${Constants.MPS_CONFIG_TEMPLATE_PATH}/recentProjects.xml")
+                .replace("PATH_TO_PROJECT", projectDir.toString())
+                .replace("PROJECT_TITLE", projectTitle)
+        )
+
         // disable tips on startup
-        if (true) {
-            currentMpsConfigPath.dir(optionsPath.toString()).file("ide.general.xml").asFile.writeText(
-                javaClass.getResource(Constants.MPS_CONFIG_TEMPLATE_PATH + "/ide.general.xml")!!.readText()
-            )
-        }
+        optionsPath.file("ide.general.xml").asFile.writeText(
+            readTemplate("${Constants.MPS_CONFIG_TEMPLATE_PATH}/ide.general.xml")
+        )
+
+        // idea.properties is shared by all OS scripts of this environment, so write it once
+        writeIdeaProperties(currentMpsConfigPath, currentDate, currentVersion)
 
         // OS specific files ...
         osToGenerate.get().forEach { currentOs ->
@@ -197,11 +186,8 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 Utils.OS.LINUX -> {
                     logger.lifecycle("Generating linux start scripts for $currentEnvironmentName ...")
 
-                    // write idea properties file
-                    writeIdeaFilePOSIX(currentMpsConfigPath, currentDate, currentVersion)
-
                     // sometimes when we obtain MPS via gradle, the sh file is missing +x. These calls return false if they don't work
-                    mpsPath.dir("bin/mps.sh").get().asFile.setExecutable(true)
+                    mpsPath.file("bin/mps.sh").get().asFile.setExecutable(true)
                     mpsPath.file("bin/linux/fsnotifier").get().asFile.setExecutable(true)
                     mpsPath.file("bin/linux/restart.py").get().asFile.setExecutable(true)
 
@@ -223,35 +209,6 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 Utils.OS.WINDOWS -> {
                     logger.lifecycle("Generating WIN start scripts for $currentEnvironmentName ...")
 
-                    // write idea properties file
-                    currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
-                        StringBuilder(
-                            javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
-                                .replace("REPLACE_ME__GENERATION_DATE", currentDate)
-                                .replace("REPLACE_ME__VERSION", currentVersion)
-                                .replace(
-                                    "REPLACE_ME__CONFIG_PATH_CONFIG",
-                                    currentMpsConfigPath.dir("config").toString()
-                                )
-                                .replace(
-                                    "REPLACE_ME__CONFIG_PATH_SYSTEM",
-                                    currentMpsConfigPath.dir("system").toString()
-                                )
-                                .replace(
-                                    "REPLACE_ME__CONFIG_PATH_SCRATCH",
-                                    currentMpsConfigPath.dir("scratch").toString()
-                                )
-                                .replace(
-                                    "REPLACE_ME__CONFIG_PATH_PLUGINS",
-                                    currentMpsConfigPath.dir("plugins").toString()
-                                )
-                                .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
-                                .replace("\\", "\\\\")
-                        )
-                            // add all user arguments
-                            .append(extraIdeaArgs.get().joinToString("\n")).toString()
-                    )
-
                     // write startup file
                     val batFileName = currentConfigPath.file(
                         MessageFormat.format(
@@ -262,7 +219,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     )
 
                     batFileName.asFile.writeText(
-                        javaClass.getResource(Constants.MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH)!!.readText()
+                        readTemplate(Constants.MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH)
                             .replace("REPLACE_ME__GENERATION_DATE", currentDate)
                             .replace("REPLACE_ME__CONFIG_MPS_PATH", currentMpsConfigPath.toString())
                             .replace("REPLACE_ME__MPS_PATH", currentMpsPath)
@@ -276,9 +233,6 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 /////////////////////////////////////////////////////////////////////////////////////////////////
                 Utils.OS.MAC -> {
                     logger.lifecycle("Generating OSX start scripts for $currentEnvironmentName ...")
-
-                    // write idea properties file
-                    writeIdeaFilePOSIX(currentMpsConfigPath, currentDate, currentVersion)
 
                     writeStartScriptPOSIX(
                         currentConfigPath,
@@ -327,7 +281,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         )
 
         shFileName.asFile.writeText(
-            javaClass.getResource(templatePath)!!.readText()
+            readTemplate(templatePath)
                 .replace("REPLACE_ME__GENERATION_DATE", currentDate)
                 .replace("REPLACE_ME__VERSION", currentVersion)
                 .replace("REPLACE_ME__CONFIG_PATH", currentConfigPath.toString())
@@ -341,14 +295,17 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
         shFileName.asFile.setExecutable(true)
     }
 
-    private fun writeIdeaFilePOSIX(
+    private fun readTemplate(path: String): String =
+        requireNotNull(javaClass.getResource(path)) { "Missing template resource '$path'" }.readText()
+
+    private fun writeIdeaProperties(
         currentMpsConfigPath: Directory,
         currentDate: String,
         currentVersion: String
     ) {
         currentMpsConfigPath.file(Constants.IDEA_PROPERTIES_FILENAME).asFile.writeText(
             StringBuilder(
-                javaClass.getResource(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)!!.readText()
+                readTemplate(Constants.IDEA_PROPERTIES_TEMPLATE_PATH)
                     .replace("REPLACE_ME__GENERATION_DATE", currentDate)
                     .replace("REPLACE_ME__VERSION", currentVersion)
                     .replace("REPLACE_ME__CONFIG_PATH_CONFIG", currentMpsConfigPath.dir("config").toString())
@@ -356,6 +313,8 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                     .replace("REPLACE_ME__CONFIG_PATH_SCRATCH", currentMpsConfigPath.dir("scratch").toString())
                     .replace("REPLACE_ME__CONFIG_PATH_PLUGINS", currentMpsConfigPath.dir("plugins").toString())
                     .replace("REPLACE_ME__CONFIG_PATH_LOG", currentMpsConfigPath.dir("log").toString())
+                    // properties format: backslashes (Windows paths) must be escaped; no-op for POSIX paths
+                    .replace("\\", "\\\\")
             )
                 // add all user arguments
                 .append(extraIdeaArgs.get().joinToString("\n")).toString()

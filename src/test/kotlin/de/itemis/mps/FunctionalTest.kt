@@ -73,10 +73,10 @@ class FunctionalTest {
         addDefaultEnvironmentBlock(buildFile)
 
         // run the default task
-        val result = gradleRunner().withArguments(":generateMpsEnvironmentDefault").build()
+        val result = gradleRunner().withArguments(":generateMpsEnvironment-Default").build()
 
         // check if task configuration actually runs
-        assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironmentDefault")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironment-Default")?.outcome)
 
         // test for expected output
         assertTrue(result.output.contains("Configuring new task(s) for environment(s) [Default]"))
@@ -128,6 +128,39 @@ class FunctionalTest {
 //        assertFalse(File(testProjectDir, ".mpsconfig/Default/startMPS_LINUX_Default.sh").readText().contains("JAVA_HOME_CANDIDATE=\"REPLACE_ME__JAVA_HOME\""))
 
         //TODO: Check the generated files if the java home was set
+    }
+
+    @Test
+    fun `writes configured settings into generated files`() {
+        val otherProject = File(testProjectDir, "other-project").apply { mkdirs() }
+        buildFile.appendText(
+            """
+                    mpsEnvironments {
+                        mpsPath.set(Path(myMpsPath.toString()).toFile())
+                        mpsProjectPath.set(Path("${mpsTestProjectPath.path}").toFile())
+
+                        environment("Default"){
+                            osToGenerate.set(listOf(Utils.OS.LINUX, Utils.OS.MAC))
+                            mpsProjectPathLocal.set(Path("${otherProject.path}").toFile())
+                            mpsSettings {
+                                httpPort.set(9292)
+                            }
+                        }
+                    }
+                """.trimIndent()
+        )
+
+        val result = gradleRunner().withArguments(":generateMpsEnvironment-Default").build()
+        assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironment-Default")?.outcome)
+
+        val envDir = File(testProjectDir, ".mpsconfig/Default")
+        assertTrue(File(envDir, "mps/mps64.vmoptions").readText().contains("-Drpc.port=9292"))
+        assertTrue(File(envDir, "README.md").readText().contains(" - LINUX\n - MAC\n"))
+
+        // per-environment project path wins; title falls back to the folder name without .mps/.name
+        val recentProjects = File(envDir, "mps/config/options/recentProjects.xml").readText()
+        assertTrue(recentProjects.contains("key=\"${otherProject.path}\""))
+        assertTrue(recentProjects.contains("frameTitle=\"other-project\""))
     }
 
     // test TODOs:

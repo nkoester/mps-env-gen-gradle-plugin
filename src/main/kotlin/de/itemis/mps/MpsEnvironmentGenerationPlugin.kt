@@ -22,40 +22,23 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
         project.afterEvaluate {
             logger.lifecycle("Configuring new task(s) for environment(s) ${settingsExtension.environmentList.map { it.environmentName }}")
 
-            val allGeneratedTasks = mutableListOf<GenerateMpsEnvironmentTask>()
-            settingsExtension.environmentList.forEach { leEnvironment ->
-                val taskName = "generateMpsEnvironment-" + leEnvironment.environmentName.substring(0, 1)
-                    .uppercase() + leEnvironment.environmentName.substring(1)
+            val allGeneratedTasks = settingsExtension.environmentList.map { leEnvironment ->
+                val taskName = "generateMpsEnvironment-" + leEnvironment.environmentName.replaceFirstChar { it.uppercase() }
 
-                val newTask = project.tasks.register(taskName, GenerateMpsEnvironmentTask::class.java) {
+                project.tasks.register(taskName, GenerateMpsEnvironmentTask::class.java) {
                     group = "mps"
                     description = "Generates an isolated MPS configuration prefix."
 
-                    // overwrite MPS path if local definition exists
-                    if (leEnvironment.mpsPathLocal.isPresent) {
-                        mpsPath.set(leEnvironment.mpsPathLocal.get())
-                    } else {
-                        mpsPath.set(settingsExtension.mpsPath.get())
-                    }
-
-                    // set java home if present
-                    if (settingsExtension.javaHome.isPresent) {
-                        javaHome.set(settingsExtension.javaHome.get())
-                    }
-
-                    // overwrite project path if local definition exists
-                    if (leEnvironment.mpsPathLocal.isPresent) {
-                        mpsProjectPath.set(leEnvironment.mpsProjectPathLocal)
-                    } else {
-                        mpsProjectPath.set(settingsExtension.mpsProjectPath)
-                    }
+                    // local definitions take precedence over the global ones
+                    mpsPath.set(leEnvironment.mpsPathLocal.orElse(settingsExtension.mpsPath))
+                    mpsProjectPath.set(leEnvironment.mpsProjectPathLocal.orElse(settingsExtension.mpsProjectPath))
+                    javaHome.set(settingsExtension.javaHome)
 
                     environmentName.set(leEnvironment.environmentName)
                     osToGenerate.set(leEnvironment.osToGenerate)
 
                     configBasePath.set(settingsExtension.targetPath)
 
-                    mpsProjectPath.set(settingsExtension.mpsProjectPath)
                     disableModelCheckBeforeGeneration.set(leEnvironment.mpsSettings.disableModelCheckBeforeGeneration)
                     lightTheme.set(leEnvironment.mpsSettings.lightTheme)
                     xms.set(leEnvironment.mpsSettings.xms)
@@ -68,18 +51,14 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     debugSuspend.set(leEnvironment.mpsSettings.debugSuspend)
 
                     extraIdeaArgs.set(leEnvironment.ideaSettings.extraIdeaArgs)
-
-                    logger.lifecycle("$taskName configured")
-
                 }
-                allGeneratedTasks.add(newTask.get())
             }
 
-//                 generate a helper task to generate all environments defined
+            // generate a helper task to generate all environments defined
             project.tasks.register("generateMpsEnvironmentAll", Task::class.java) {
                 group = "mps"
                 description = "Generates ALL isolated MPS configuration prefixes."
-                allGeneratedTasks.forEach { dependsOn(it) }
+                dependsOn(allGeneratedTasks)
             }
 
 //        })

@@ -23,6 +23,7 @@
 -Djdk.module.illegalAccess.silent=true
 -Dkotlinx.coroutines.debug=off
 -Dsun.tools.attach.tmp.only=true
+-Drpc.port=REPLACE_ME__HTTP_PORT
 #Additional MPS options:
 -client
 -Dfile.encoding=UTF-8
