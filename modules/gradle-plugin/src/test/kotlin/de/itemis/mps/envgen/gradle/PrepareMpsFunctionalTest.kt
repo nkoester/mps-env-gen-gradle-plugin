@@ -1,5 +1,6 @@
 package de.itemis.mps.envgen.gradle
 
+import de.itemis.mps.envgen.CACHE_ENV
 import de.itemis.mps.envgen.FakeNexus
 import de.itemis.mps.envgen.OS
 import de.itemis.mps.envgen.distribution.MpsVersion
@@ -28,14 +29,19 @@ class PrepareMpsFunctionalTest {
     private lateinit var nexus: FakeNexus
     private val platform = Platform.current
 
-    private fun runner(vararg args: String): GradleRunner =
-        GradleRunner.create().withProjectDir(projectDir).withPluginClasspath().withArguments(*args, "--stacktrace")
+    @TempDir
+    lateinit var cacheDir: File
 
-    private fun buildFile(mpsBlock: String) {
-        File(projectDir, "settings.gradle.kts").writeText("")
-        File(projectDir, "mps-project/.mps").mkdirs()
-        File(projectDir, "mps-project/.mps/.name").writeText("TestProject")
-        File(projectDir, "build.gradle.kts").writeText(
+    private fun runner(vararg args: String, dir: File = projectDir): GradleRunner =
+        GradleRunner.create().withProjectDir(dir).withPluginClasspath().withArguments(*args, "--stacktrace")
+            // never the real cache folder
+            .withEnvironment(System.getenv() + (CACHE_ENV to cacheDir.path))
+
+    private fun buildFile(mpsBlock: String, dir: File = projectDir) {
+        File(dir, "settings.gradle.kts").writeText("")
+        File(dir, "mps-project/.mps").mkdirs()
+        File(dir, "mps-project/.mps/.name").writeText("TestProject")
+        File(dir, "build.gradle.kts").writeText(
             """
             plugins { id("de.itemis.mps.mps-env-gen-gradle-plugin") }
             repositories { maven { url = uri("${nexus.url}") } }
@@ -47,8 +53,9 @@ class PrepareMpsFunctionalTest {
         )
     }
 
+    /** prepared MPS in the shared cache folder (default) */
     private fun distribution(version: String) =
-        File(projectDir, ".mpsconfig/" + Platform.distributionDirName(MpsVersion.parse(version), platform.os))
+        File(cacheDir, "distributions/" + Platform.distributionDirName(MpsVersion.parse(version), platform.os))
 
     @BeforeEach
     fun setup() {
@@ -141,6 +148,42 @@ class PrepareMpsFunctionalTest {
         val result = runner("generateMpsEnvironmentAll").build()
         assertEquals(1, result.tasks.count { it.path.startsWith(":prepareMps-") })
         assertTrue(File(projectDir, ".mpsconfig/A").isDirectory && File(projectDir, ".mpsconfig/B").isDirectory)
+    }
+
+    @Test
+    fun `projects share the prepared MPS in the cache folder`() {
+        nexus.mps("2026.1")
+        nexus.marker("2026.1", "25.0.3-b329.124")
+        nexus.jbr("25.0.3-b329.124", platform)
+        val block = """    mpsVersion.set("2026.1")
+                environments.register("Default")"""
+        buildFile(block)
+        runner("generateMpsEnvironment-Default").build()
+        val marker = File(distribution("2026.1"), PreparedDistribution.MARKER_FILE)
+        val prepared = marker.lastModified()
+        assertFalse(File(projectDir, ".mpsconfig/" + distribution("2026.1").name).exists())
+
+        // another checkout knows nothing of the first one's task history, but must not replace the shared MPS
+        val other = File(projectDir, "other").apply { mkdirs() }
+        buildFile(block, other)
+        val result = runner("generateMpsEnvironment-Default", dir = other).build()
+        assertTrue("Using prepared MPS 2026.1" in result.output, result.output)
+        assertEquals(prepared, marker.lastModified())
+        assertTrue(distribution("2026.1").path in File(other, ".mpsconfig/Default/" + EnvironmentGenerator.startScriptName(platform.os, "Default")).readText())
+    }
+
+    @Test
+    fun `mpsInTargetPath keeps the prepared MPS in the target path`() {
+        nexus.mps("2026.1")
+        nexus.marker("2026.1", "25.0.3-b329.124")
+        nexus.jbr("25.0.3-b329.124", platform)
+        buildFile("""    mpsVersion.set("2026.1")
+                mpsInTargetPath.set(true)
+                environments.register("Default")""")
+        runner("generateMpsEnvironment-Default").build()
+        val local = File(projectDir, ".mpsconfig/" + distribution("2026.1").name)
+        assertTrue(File(local, PreparedDistribution.MARKER_FILE).isFile)
+        assertFalse(distribution("2026.1").exists())
     }
 
     @Test

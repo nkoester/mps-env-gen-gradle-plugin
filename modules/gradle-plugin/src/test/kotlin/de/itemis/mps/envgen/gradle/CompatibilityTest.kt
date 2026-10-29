@@ -1,5 +1,7 @@
 package de.itemis.mps.envgen.gradle
 
+import de.itemis.mps.envgen.CACHE_ENV
+import de.itemis.mps.envgen.distribution.MpsVersion
 import de.itemis.mps.envgen.FakeNexus
 import de.itemis.mps.envgen.distribution.Platform
 import org.gradle.testkit.runner.GradleRunner
@@ -40,6 +42,7 @@ class CompatibilityTest {
 
         mpsEnvironments {
             mpsVersion.set("2026.1")
+            mpsInTargetPath.set(true)
             projectPath.set(layout.projectDirectory.dir("mps-project"))
             environments {
                 register("dev") {
@@ -62,6 +65,7 @@ class CompatibilityTest {
 
         mpsEnvironments {
             mpsVersion = '2026.1'
+            mpsInTargetPath = true
             projectPath = layout.projectDirectory.dir('mps-project')
             environments {
                 register('dev') {
@@ -93,6 +97,8 @@ class CompatibilityTest {
             .withProjectDir(projectDir)
             .withPluginClasspath()
             .withGradleVersion(gradle)
+            // never the real cache folder
+            .withEnvironment(System.getenv() + (CACHE_ENV to File(projectDir, "cache").path))
             .withArguments("generateMpsEnvironment-Dev", "--stacktrace")
             .build()
 
@@ -100,6 +106,7 @@ class CompatibilityTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironment-Dev")?.outcome)
         val vmoptions = File(projectDir, ".mpsconfig/dev/mps/mps64.vmoptions").readText()
         assertTrue("-Xmx4096m" in vmoptions && "-Dcompat=$dsl" in vmoptions && "address=127.0.0.1:5071" in vmoptions, vmoptions)
+        assertTrue(File(projectDir, ".mpsconfig/" + Platform.distributionDirName(MpsVersion.parse("2026.1"), Platform.current.os)).isDirectory)
         // MPS 2026.1 has the new UI
         assertTrue("ExperimentalDark" in File(projectDir, ".mpsconfig/dev/mps/config/options/laf.xml").readText())
     }

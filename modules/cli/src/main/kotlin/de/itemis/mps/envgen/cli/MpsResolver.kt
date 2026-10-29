@@ -2,6 +2,7 @@ package de.itemis.mps.envgen.cli
 
 import com.github.ajalt.clikt.core.UsageError
 import de.itemis.mps.envgen.OS
+import de.itemis.mps.envgen.distributionsDir
 import de.itemis.mps.envgen.distribution.DistributionPreparer
 import de.itemis.mps.envgen.distribution.JbrResolutionException
 import de.itemis.mps.envgen.distribution.MpsVersion
@@ -22,8 +23,11 @@ class MpsResolver(
     private val warn: (String) -> Unit,
 ) {
 
-    /** [distributionTarget] receives prepared distributions (`mps-<version>-<OS>`), next to the environments */
-    fun resolve(mps: String, distributionTarget: File): ResolvedMps {
+    /**
+     * MPS from Nexus is prepared in the cache (`<cache>/distributions/mps-<version>-<OS>`), shared by all environments;
+     * with --mps-in-target in [environmentParent], the folder of the environment
+     */
+    fun resolve(mps: String, environmentParent: File): ResolvedMps {
         val path = File(mps)
         if (path.exists()) {
             if (!path.isDirectory) throw UsageError("MPS path '$mps' is not a directory")
@@ -36,7 +40,7 @@ class MpsResolver(
             return ResolvedMps(it.absoluteFile.normalize(), null, MpsOrigin.LOCAL, mps, null)
         }
         val version = runCatching { MpsVersion.parse(mps) }.getOrElse {
-            throw UsageError("'$mps' is neither an existing MPS path, a folder in ${installs ?: "--installs"}, nor an MPS version like 2025.3")
+            throw UsageError("'$mps' is neither an existing MPS path, a folder in ${installs ?: "--installs"}, nor an MPS version like 2025.1.4")
         }
         installs?.let { base ->
             LocalMpsLocator.find(base, version, OS.current)?.let {
@@ -47,12 +51,13 @@ class MpsResolver(
         }
         if (options.noDownload) throw failure("MPS $version not found locally and --no-download is set")
 
-        val prepared = prepared(version, distributionTarget)
+        val prepared = prepared(version, environmentParent)
         return ResolvedMps(prepared.home, prepared.javaHome, MpsOrigin.NEXUS, version.toString(), prepared.jbrVersion.toString())
     }
 
-    /** prepared distribution of [version] in [distributionTarget]; reused if already there */
-    fun prepared(version: MpsVersion, distributionTarget: File): PreparedDistribution {
+    /** prepared distribution of [version]; reused if already there. [inTarget]: in [environmentParent] instead of the cache */
+    fun prepared(version: MpsVersion, environmentParent: File, inTarget: Boolean = options.mpsInTarget): PreparedDistribution {
+        val distributionTarget = if (inTarget) environmentParent.absoluteFile.normalize() else distributionsDir(options.cacheDir)
         val platform = Platform.current
         val root = File(distributionTarget, Platform.distributionDirName(version, platform.os))
         DistributionPreparer.read(root)
@@ -64,14 +69,14 @@ class MpsResolver(
         if (options.noDownload) throw failure("MPS $version is not prepared in $distributionTarget and --no-download is set")
 
         info("Preparing MPS $version from ${options.repository} in $root")
-        val source = services.artifactSource(options.repository, options.cacheDir, verbose)
+        val source = services.artifactSource(options.repository, File(options.cacheDir, "downloads"), verbose)
         val jbr = try {
             source.resolveJbr(version, platform, options.jbrVersion)
         } catch (e: JbrResolutionException) {
             throw failure(e.message!!)
         }
         jbr.resolution.warning?.let(warn)
-        val prepared = DistributionPreparer.prepare(root, platform, version, jbr.resolution.version, source.mpsArchive(version), jbr.archive)
+        val prepared = DistributionPreparer.prepareOrReuse(root, platform, version, jbr.resolution.version, { source.mpsArchive(version) }, { jbr.archive })
         prepared.warnings.forEach(warn)
         info("MPS $version prepared with JBR ${prepared.jbrVersion}")
         return prepared

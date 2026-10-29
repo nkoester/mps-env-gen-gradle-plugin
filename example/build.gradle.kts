@@ -43,11 +43,13 @@ val setup = tasks.register("setup") {
 
 
 
-val pathToYourMPSInstallation = Path("/vol/mps/MPS-2022.2.4-linux/").toFile()
-
 mpsEnvironments {
-    // defaults for all environments; use mpsVersion.set("2025.3") instead to download MPS from Nexus
-    mpsPath.set(pathToYourMPSInstallation)
+    // defaults for all environments: MPS of the version in gradle/libs.versions.toml
+    // will be downloaded from Nexus via Gradle alongside matching JBR, moved to
+    // .mpsconfig/mps-$VERSION
+    mpsVersion.set(libs.versions.mps.get())
+    // keep the prepared MPS in .mpsconfig/mps-<version>-<OS> instead of the shared cache folder (~/.cache/mps-env-gen)
+    mpsInTargetPath.set(true)
     projectPath.set(project.layout.projectDirectory.dir("mps-project"))
 
     environments {
@@ -57,8 +59,9 @@ mpsEnvironments {
             // start scripts to generate (default: current OS); scripts contain absolute paths of this machine
             os.set(listOf(OS.LINUX, OS.MAC, OS.WINDOWS))
 
-            // any setting of the defaults can be overridden per environment
-            mpsPath.set(pathToYourMPSInstallation)
+            // any setting of the defaults can be overridden per environment, e.g. a locally installed MPS instead of
+            // the download (a path takes precedence over mpsVersion):
+            // mpsPath.set(file("/path/to/MPS-${libs.versions.mps.get()}"))
             // projectPath.set(file("/some/other/mps/project/path/"))
 
             httpPort.set(9292)

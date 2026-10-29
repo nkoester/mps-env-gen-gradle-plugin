@@ -1,4 +1,5 @@
 import java.io.File
+import java.net.URI
 import java.nio.file.Files
 import org.gradle.api.provider.Provider
 
@@ -44,6 +45,34 @@ val versionResource = tasks.register("versionResource") {
     doLast { output.get().file("mps-env-gen-version.txt").asFile.apply { parentFile.mkdirs() }.writeText(version) }
 }
 sourceSets.main { resources.srcDir(versionResource) }
+
+// MPS versions offered by tab completion without local installations; packaged, so completion needs no network.
+// Refresh by hand: ./gradlew :cli:updateMpsVersions [-Prepository=<maven repository>]
+tasks.register("updateMpsVersions") {
+    group = "maintenance"
+    description = "Updates src/main/resources/mps-versions.txt from the MPS versions published in the Maven repository."
+    val repository = providers.gradleProperty("repository").orElse("https://artifacts.itemis.cloud/repository/maven-mps")
+    val output = layout.projectDirectory.file("src/main/resources/mps-versions.txt")
+    outputs.upToDateWhen { false }
+    doLast {
+        val url = "${repository.get().trimEnd('/')}/com/jetbrains/mps/maven-metadata.xml"
+        val metadata = URI(url).toURL().readText()
+        val pattern = Regex("""^(\d{4})\.(\d+)(?:\.(\d+))?(?:-(.+))?$""")
+        val versions = Regex("<version>([^<]+)</version>").findAll(metadata).map { it.groupValues[1].trim() }
+            .mapNotNull { v -> pattern.matchEntire(v)?.destructured?.let { (y, m, p, q) -> Triple(v, listOf(y.toInt(), m.toInt(), p.ifEmpty { "0" }.toInt()), q) } }
+            // supported range of the tool (MpsVersion.FIRST_SUPPORTED)
+            .filter { (_, numbers) -> numbers[0] > 2022 || numbers[0] == 2022 && numbers[1] >= 2 }
+            .toList()
+        val finals = versions.filter { it.third.isEmpty() }.map { it.second }.toSet()
+        // pre-releases only until their release is published
+        val listed = versions.filter { (_, numbers, qualifier) -> qualifier.isEmpty() || numbers !in finals }
+            .sortedWith(compareBy<Triple<String, List<Int>, String>>({ it.second[0] }, { it.second[1] }, { it.second[2] }, { it.third.isEmpty() }, { it.third }))
+            .map { it.first }
+        check(listed.isNotEmpty()) { "no MPS versions found in $url" }
+        output.asFile.writeText("# MPS versions for tab completion; ./gradlew :cli:updateMpsVersions\n" + listed.joinToString("\n", postfix = "\n"))
+        logger.lifecycle("${listed.size} MPS versions written to ${output.asFile}")
+    }
+}
 
 // default artifact: one runnable jar for all OS (`java -jar mps-env-gen-<version>-all.jar`)
 val fatJar = tasks.register<Jar>("fatJar") {
@@ -104,14 +133,14 @@ tasks.named("nativeCompile") {
 // ---------------------------------------------------------------------------------------------------------------------
 // Installation into a prefix (Unix layout, also works on Windows)
 //
-//   ./gradlew installCli                                        # ~/.local/bin/mps-env-gen
-//   ./gradlew installCli -Pprefix=~/.local -PcliName=zookeeper2 # ~/.local/bin/zookeeper2
-//   ./gradlew installNativeCli -PcliName=zookeeper2             # same with the native binary (current OS only)
-//   ./gradlew uninstallCli -PcliName=zookeeper2
+//   ./gradlew installCli                     # ~/.local/bin/mps-env-gen
+//   ./gradlew installCli -Pprefix=~/opt      # ~/opt/bin/mps-env-gen
+//   ./gradlew installNativeCli               # same with the native binary (current OS only)
+//   ./gradlew uninstallCli
 //
 // Layout: <prefix>/lib/mps-env-gen/      installed tool (replaced on every install)
-//         <prefix>/bin/<cliName>         symlink to it (Windows: <cliName>.bat wrapper)
-//         <prefix>/share/bash-completion/completions/<cliName>
+//         <prefix>/bin/mps-env-gen       symlink to it (Windows: mps-env-gen.bat wrapper)
+//         <prefix>/share/bash-completion/completions/mps-env-gen
 // ---------------------------------------------------------------------------------------------------------------------
 
 val installPrefix: Provider<File> = providers.gradleProperty("prefix")
@@ -119,53 +148,46 @@ val installPrefix: Provider<File> = providers.gradleProperty("prefix")
     .map { File(it.replaceFirst(Regex("^~(?=/|\\\\|$)"), Regex.escapeReplacement(System.getProperty("user.home")))) }
     .orElse(File(System.getProperty("user.home"), ".local"))
     .map { it.absoluteFile.normalize() }
-val cliName: Provider<String> = providers.gradleProperty("cliName").orElse("mps-env-gen")
 val isWindows = System.getProperty("os.name").lowercase().contains("win")
 
-/** bash completion registered for the installed name; clikt generates it for `mps-env-gen` */
 val bashCompletion = tasks.register<JavaExec>("bashCompletion") {
     description = "Generates the bash completion script for the CLI."
     val output = layout.buildDirectory.file("completion/mps-env-gen.bash")
-    val name = cliName
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass.set(application.mainClass)
     args("completion", "bash")
-    inputs.property("cliName", name)
     outputs.file(output)
     doFirst { standardOutput = output.get().asFile.apply { parentFile.mkdirs() }.outputStream() }
-    doLast {
-        standardOutput.close()
-        if (name.get() != "mps-env-gen") output.get().asFile.appendText("complete -F _mps_env_gen ${name.get()}\n")
-    }
+    doLast { standardOutput.close() }
 }
 
 fun Task.linkInstalledTool(home: Provider<File>, executable: String) {
     val prefix = installPrefix
-    val name = cliName
+    val tool = "mps-env-gen"
     val completion = bashCompletion.flatMap { it.outputs.files.elements }.map { it.single().asFile }
     doLast {
         val target = home.get().toPath().resolve(executable)
         val bin = prefix.get().toPath().resolve("bin").also { Files.createDirectories(it) }
         if (isWindows) {
             // symlinks need admin rights or developer mode on Windows
-            bin.resolve("${name.get()}.bat").toFile().writeText("@\"$target\" %*\r\n")
+            bin.resolve("$tool.bat").toFile().writeText("@\"$target\" %*\r\n")
         } else {
-            val link = bin.resolve(name.get())
+            val link = bin.resolve(tool)
             Files.deleteIfExists(link)
             Files.createSymbolicLink(link, target)
         }
         val completions = prefix.get().toPath().resolve("share/bash-completion/completions").also { Files.createDirectories(it) }
-        completion.get().copyTo(completions.resolve(name.get()).toFile(), overwrite = true)
+        completion.get().copyTo(completions.resolve(tool).toFile(), overwrite = true)
 
-        logger.lifecycle("Installed ${name.get()} -> $target")
-        logger.lifecycle("Make sure ${bin} is on your PATH; completion: source ${completions.resolve(name.get())}")
+        logger.lifecycle("Installed $tool -> $target")
+        logger.lifecycle("Make sure ${bin} is on your PATH; completion: source ${completions.resolve(tool)}")
     }
 }
 
 tasks.register<Sync>("installCli") {
     group = "distribution"
-    description = "Installs the CLI (JVM, Java 11+) into <prefix>/lib/mps-env-gen and links <prefix>/bin/<cliName>. " +
-        "Properties: -Pprefix (default ~/.local), -PcliName (default mps-env-gen)."
+    description = "Installs the CLI (JVM, Java 11+) into <prefix>/lib/mps-env-gen and links <prefix>/bin/mps-env-gen. " +
+        "Property: -Pprefix (default ~/.local)."
     dependsOn(bashCompletion)
     with(distributions.main.get().contents)
     into(installPrefix.map { File(it, "lib/mps-env-gen") })
@@ -187,15 +209,15 @@ tasks.register<Sync>("installNativeCli") {
 
 tasks.register("uninstallCli") {
     group = "distribution"
-    description = "Removes what installCli/installNativeCli installed for -Pprefix and -PcliName."
+    description = "Removes what installCli/installNativeCli installed for -Pprefix."
     val prefix = installPrefix
-    val name = cliName
+    val tool = "mps-env-gen"
     doLast {
         val bin = prefix.get().resolve("bin")
-        listOf(File(bin, name.get()), File(bin, "${name.get()}.bat"), File(prefix.get(), "share/bash-completion/completions/${name.get()}"))
+        listOf(File(bin, tool), File(bin, "$tool.bat"), File(prefix.get(), "share/bash-completion/completions/$tool"))
             .forEach { Files.deleteIfExists(it.toPath()) }
         File(prefix.get(), "lib/mps-env-gen").deleteRecursively()
-        logger.lifecycle("Removed ${name.get()} from ${prefix.get()}")
+        logger.lifecycle("Removed $tool from ${prefix.get()}")
     }
 }
 

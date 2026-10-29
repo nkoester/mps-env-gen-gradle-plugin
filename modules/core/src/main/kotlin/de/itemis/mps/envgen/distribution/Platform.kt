@@ -106,7 +106,7 @@ data class Platform(
 
         private val DISTRIBUTION_DIR = Regex("""mps-\d{4}\.\d+.*-(LINUX|MAC|WINDOWS)""")
 
-        /** folder name of a prepared distribution inside the target path, e.g. `mps-2025.3-LINUX` */
+        /** folder name of a prepared distribution inside the target path, e.g. `mps-2025.1.4-LINUX` */
         fun distributionDirName(mpsVersion: MpsVersion, os: OS): String = "$DISTRIBUTION_DIR_PREFIX$mpsVersion-${os.name}"
 
         /** names of prepared distributions (`mps-<version>-<OS>`), which no environment may use */

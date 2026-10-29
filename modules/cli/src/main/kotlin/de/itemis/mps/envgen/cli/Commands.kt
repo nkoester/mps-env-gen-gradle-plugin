@@ -45,13 +45,13 @@ class MpsEnvGenCommand(services: CliServices = CliServices()) : CoreNoOpCliktCom
 
     override fun helpEpilog(context: Context) = """
         Examples:
-          mps-env-gen create 2025.3 --temp --start                  throw-away environment, started right away
-          mps-env-gen create 2025.3 --project ./mps-project         environment for a project in ./.mpsconfig/2025.3
-          mps-env-gen create /opt/MPS-2025.3 --name review          use an installed MPS
-          mps-env-gen copy 2025.3 try-2026.1 --mps 2026.1           same settings and plugins, other MPS version
-          mps-env-gen refresh 2025.3 --start -d                     start again, with debugging this time
-          mps-env-gen refresh 2025.3 --xmx 6g                       apply a setting to an existing environment
-          mps-env-gen init-defaults                                 template for defaults of create, e.g. installs=/vol/mps
+          mps-env-gen create 2025.1.4 --temp --start           throw-away environment, started right away
+          mps-env-gen create 2025.1.4 --project ./mps-project  environment for a project in ./.mpsconfig/2025.1.4
+          mps-env-gen create /opt/MPS-2025.1.4 --name review   use an installed MPS
+          mps-env-gen copy 2025.1.4 try-2026.1 --mps 2026.1    same settings and plugins, other MPS version
+          mps-env-gen refresh 2025.1.4 --start -d              start again, with debugging this time
+          mps-env-gen refresh 2025.1.4 --xmx 6g                apply a setting to an existing environment
+          mps-env-gen init-defaults                            template for defaults of create, e.g. installs=/vol/mps
 
         MPS versions are taken from --installs (or ${'$'}MPS_ENV_GEN_INSTALLS) if present there, otherwise downloaded.
         Without the tool, start an environment with its startMPS_<OS>_<name> script (add -d for debugging).
@@ -129,6 +129,7 @@ abstract class EnvironmentCommand(name: String, protected val services: CliServi
     protected fun startIfRequested(spec: EnvironmentSpec, args: List<String>?) {
         args ?: return
         val script = File(spec.environmentDir, EnvironmentGenerator.startScriptName(OS.current, spec.environmentName))
+        info("")
         info("Starting ${spec.environmentName} ...")
         val exitCode = services.runScript(script, args)
         if (exitCode != 0) throw ProgramResult(exitCode)
@@ -138,17 +139,23 @@ abstract class EnvironmentCommand(name: String, protected val services: CliServi
     protected fun printStart(spec: EnvironmentSpec, verb: String) {
         val stored = EnvironmentMetadata.read(spec.environmentDir, spec)
         val script = File(spec.environmentDir, EnvironmentGenerator.startScriptName(OS.current, spec.environmentName))
-        val debug = if (spec.debug) "debug port ${spec.debugPort}" else "debugging off"
-        info("Environment '${spec.environmentName}' $verb in ${spec.environmentDir}")
-        info("  created ${stored?.created ?: "?"}, MPS ${spec.mpsSource} (${spec.mpsOrigin.name.lowercase()}), " +
-            "${spec.jbrVersion?.let { "JBR $it, " } ?: ""}$debug, http port ${spec.httpPort}")
-        info("Start it with:")
-        info("    $script")
+        val details = listOfNotNull(
+            "path" to spec.environmentDir.path,
+            "created" to (stored?.created ?: "?"),
+            "MPS" to "${spec.mpsSource} (${spec.mpsOrigin.name.lowercase()})",
+            spec.jbrVersion?.let { "JBR" to it },
+            "debugging" to if (spec.debug) "on, port ${spec.debugPort}" else "off (start script: -d)",
+            spec.httpPort?.let { "http port" to "$it (fixed)" },
+        )
+        val width = details.maxOf { it.first.length }
+        info("Environment '${spec.environmentName}' $verb")
+        details.forEach { (key, value) -> info("  ${key.padEnd(width)}  $value") }
+        info("")
 
-        if (output.copy) {
-            if (services.clipboard(script.path)) info("Copied to the clipboard.")
-            else verbose("No clipboard tool found (wl-copy, xclip, xsel, pbcopy or clip.exe)")
-        }
+        val copied = output.copy && services.clipboard(script.path)
+        if (output.copy && !copied) verbose("No clipboard tool found (wl-copy, xclip, xsel, pbcopy or clip.exe)")
+        info(if (copied) "Start it with (copied to the clipboard):" else "Start it with:")
+        info("  $script")
     }
 
     private fun placeholderSpec(environmentDir: File) = EnvironmentSpec(
@@ -159,14 +166,14 @@ abstract class EnvironmentCommand(name: String, protected val services: CliServi
 
 class CreateCommand(services: CliServices) : EnvironmentCommand("create", services) {
 
-    override fun help(context: Context) = "Create a new environment for <mps> (version, e.g. 2025.3, or path to an installation)."
+    override fun help(context: Context) = "Create a new environment for <mps> (version, e.g. 2025.1.4, or path to an installation)."
 
     override fun helpEpilog(context: Context) = """
         Examples:
-          mps-env-gen create 2025.3 --temp --start
-          mps-env-gen create 2025.3 --installs /vol/mps --project ./mps-project --theme dark
+          mps-env-gen create 2025.1.4 --temp --start
+          mps-env-gen create 2025.1.4 --installs /vol/mps --project ./mps-project --theme dark
           mps-env-gen create MPS-2022.2.4-linux --installs /vol/mps --name legacy
-          mps-env-gen create /opt/MPS-2025.3 --xmx 6g --vm-option=-Dmy.option=1
+          mps-env-gen create /opt/MPS-2025.1.4 --xmx 6g --vm-option=-Dmy.option=1
     """.trimIndent()
 
     private val mps by argument("mps", help = "MPS version, folder name in --installs, or path to an MPS installation",
@@ -218,9 +225,9 @@ class CopyCommand(services: CliServices) : EnvironmentCommand("copy", services) 
 
     override fun helpEpilog(context: Context) = """
         Examples:
-          mps-env-gen copy 2025.3 experiment                       next to the source, new ports
-          mps-env-gen copy 2025.3 try-2026.1 --mps 2026.1 --start  same settings, other MPS version
-          mps-env-gen copy .mpsconfig/main scratch --into /tmp --with-caches        into another folder, with caches
+          mps-env-gen copy 2025.1.4 experiment                                next to the source, new ports
+          mps-env-gen copy 2025.1.4 try-2026.1 --mps 2026.1 --start           same settings, other MPS version
+          mps-env-gen copy .mpsconfig/main scratch --into /tmp --with-caches  into another folder, with caches
     """.trimIndent()
 
     private val env by argument("env", help = "environment path or name")
@@ -269,8 +276,8 @@ class RenameCommand(services: CliServices) : EnvironmentCommand("rename", servic
 
     override fun helpEpilog(context: Context) = """
         Examples:
-          mps-env-gen rename 2025.3 main
-          mps-env-gen rename /tmp/mps-env-gen/2025.3-20261029-104450 keep-me
+          mps-env-gen rename 2025.1.4 main
+          mps-env-gen rename /tmp/mps-env-gen/2025.1.4-20261029-104450 keep-me
     """.trimIndent()
 
     private val env by argument("env", help = "environment path or name")
@@ -302,11 +309,11 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
         Settings files that MPS or you may have changed are kept unless --reset-settings or the setting's option is given.
 
         Examples:
-          mps-env-gen refresh main                                 after moving the environment
-          mps-env-gen refresh main --start=tmuxLA -d               start in tmux with log window and debugging
-          mps-env-gen refresh main --xmx 6g --theme dark           apply settings (previous files in .backup/)
-          mps-env-gen refresh main --mps 2026.1                    switch the MPS version
-          mps-env-gen refresh main --reset-settings                back to the generated defaults
+          mps-env-gen refresh main                        after moving the environment
+          mps-env-gen refresh main --start=tmuxLA -d      start in tmux with log window and debugging
+          mps-env-gen refresh main --xmx 6g --theme dark  apply settings (previous files in .backup/)
+          mps-env-gen refresh main --mps 2026.1           switch the MPS version
+          mps-env-gen refresh main --reset-settings       back to the generated defaults
     """.trimIndent()
 
     private val env by argument("env", help = "environment path or name")
@@ -326,12 +333,14 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
         val stored = read(dir)
         // the location wins over what is stored: the environment may have been moved
         var spec = stored.spec.copy(targetPath = dir.parentFile, environmentName = dir.name)
+        // an MPS prepared in the target folder (--mps-in-target) stays there, also after moving the environment
+        val mpsWasInTarget = stored.spec.mpsPath.absoluteFile.normalize().startsWith(stored.spec.targetPath.absoluteFile.normalize())
         val resolver = MpsResolver(source, services, ::info, ::verbose, ::warn)
 
         spec = when {
             mps != null -> spec.withMps(resolver.resolve(mps!!, spec.targetPath))
             spec.mpsOrigin == MpsOrigin.NEXUS -> {
-                val prepared = resolver.prepared(MpsVersion.parse(spec.mpsSource), spec.targetPath)
+                val prepared = resolver.prepared(MpsVersion.parse(spec.mpsSource), spec.targetPath, inTarget = source.mpsInTarget || mpsWasInTarget)
                 // a JBR of the distribution is replaced, an explicitly chosen one kept
                 val javaHome = spec.javaHome?.takeUnless { it.absoluteFile.startsWith(prepared.root.absoluteFile) } ?: prepared.javaHome
                 spec.copy(mpsPath = prepared.home, javaHome = javaHome, jbrVersion = prepared.jbrVersion.toString())
@@ -368,13 +377,18 @@ internal fun isHeld(file: File): Boolean {
 }
 
 /**
- * tab completion of `<mps>`: folder names in the installations folder given by --installs on the command line,
- * else by the environment; paths (words with '/') complete as folders. Globs instead of `ls`, which may be aliased.
+ * tab completion of `<mps>`: the versions of the MPS installations in the folder given by --installs on the command
+ * line, else by the environment (`MPS-2026.1-linux` completes as `2026.1`, which create resolves to that folder);
+ * without one the packaged Nexus versions ([PackagedMpsVersions]), so no network call. Folders without a version
+ * in their name are not offered. Paths (words with '/') complete as folders. Globs instead of `ls`, which may be aliased.
  */
 private val INSTALLS_COMPLETION = CompletionCandidates.Custom { shell ->
+    val versions = PackagedMpsVersions.all.joinToString(" ")
     when (shell) {
         CompletionCandidates.Custom.ShellType.BASH -> """
-            local cur="${'$'}{COMP_WORDS[COMP_CWORD]}" dir="${'$'}{MPS_ENV_GEN_INSTALLS:-${'$'}{MPS_BASE_PATH:-}}" entry i
+            local cur="${'$'}{COMP_WORDS[COMP_CWORD]}" dir="${'$'}{MPS_ENV_GEN_INSTALLS:-${'$'}{MPS_BASE_PATH:-}}" entry i version
+            # a whole version in a folder name, as LocalMpsLocator matches it
+            local re='(^|[^0-9.])([0-9]{4}\.[0-9]+(\.[0-9]+)?(-(EAP|RC)[0-9]*)?)([^0-9.]|${'$'})'
             local -a names=()
             if [[ "${'$'}{cur}" == */* ]]; then
                 COMPREPLY=(${'$'}(compgen -d -- "${'$'}{cur}"))
@@ -393,14 +407,32 @@ private val INSTALLS_COMPLETION = CompletionCandidates.Custom { shell ->
                     # MPS installations only, as accepted by create
                     [[ -d "${'$'}{entry}bin" || -d "${'$'}{entry}Contents/bin" ]] || continue
                     entry="${'$'}{entry%/}"
-                    names+=("${'$'}{entry##*/}")
+                    [[ "${'$'}{entry##*/}" =~ ${'$'}re ]] || continue
+                    version="${'$'}{BASH_REMATCH[2]}"
+                    # e.g. linux and mac installations of one version
+                    [[ " ${'$'}{names[*]} " == *" ${'$'}{version} "* ]] || names+=("${'$'}{version}")
                 done
+            else
+                # no installations folder: versions downloadable from Nexus, packaged with the tool
+                names=($versions)
             fi
             COMPREPLY=(${'$'}(compgen -W "${'$'}{names[*]}" -- "${'$'}{cur}"))
         """.trimIndent()
-        // fish: from the environment only
+        // fish: installations from the environment, else the packaged versions
         CompletionCandidates.Custom.ShellType.FISH ->
-            "\"(for d in \$MPS_ENV_GEN_INSTALLS/*/bin/ \$MPS_BASE_PATH/*/bin/; basename (dirname \$d); end 2>/dev/null)\""
+            "\"(if set -q MPS_ENV_GEN_INSTALLS; or set -q MPS_BASE_PATH; " +
+                "for d in \$MPS_ENV_GEN_INSTALLS/*/bin/ \$MPS_BASE_PATH/*/bin/; " +
+                "string match -rg '(?:^|[^0-9.])(\\d{4}\\.\\d+(?:\\.\\d+)?(?:-(?:EAP|RC)\\d*)?)(?:[^0-9.]|\$)' (basename (dirname \$d)); " +
+                "end 2>/dev/null | sort -u; " +
+                "else; string split ' ' '$versions'; end)\""
+    }
+}
+
+/** MPS versions on Nexus as of the last `./gradlew :cli:updateMpsVersions`, oldest first */
+internal object PackagedMpsVersions {
+    val all: List<String> by lazy {
+        PackagedMpsVersions::class.java.getResource("/mps-versions.txt")?.readText().orEmpty()
+            .lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }
     }
 }
 

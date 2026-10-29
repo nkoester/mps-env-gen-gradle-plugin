@@ -16,6 +16,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("mpsEnvironments", MpsEnvironmentsExtension::class.java)
         extension.targetPath.convention(project.layout.projectDirectory.dir(".mpsconfig"))
+        extension.mpsInTargetPath.convention(false)
 
         extension.environments.configureEach {
             if (Platform.isReservedEnvironmentName(name)) {
@@ -29,7 +30,6 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
             xms.convention("1024m")
             xmx.convention("2048m")
             ratio.convention(4)
-            httpPort.convention(63321)
             debug.convention(false)
             debugPort.convention(5071)
             debugSuspend.convention(false)

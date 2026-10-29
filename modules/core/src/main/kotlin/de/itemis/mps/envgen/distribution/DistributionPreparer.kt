@@ -2,6 +2,7 @@ package de.itemis.mps.envgen.distribution
 
 import de.itemis.mps.envgen.OS
 import java.io.File
+import java.io.RandomAccessFile
 import java.util.Properties
 
 /** content of the marker file written into every prepared distribution */
@@ -36,6 +37,26 @@ object DistributionPreparer {
             unpackMps = { Archives.unzip(mpsArchive, it) },
             unpackJbr = { Archives.untarGz(jbrArchive, it) },
         )
+
+    /**
+     * [target] if it already holds MPS [mpsVersion] with JBR [jbrVersion] for [platform], otherwise prepared from the
+     * archives. Distributions may be shared (cache folder, several projects, CLI and Gradle), so preparation is
+     * serialised by a lock file next to [target] and an existing distribution, possibly in use, is never replaced
+     * when it matches.
+     */
+    fun prepareOrReuse(
+        target: File, platform: Platform, mpsVersion: MpsVersion, jbrVersion: JbrVersion,
+        mpsArchive: () -> File, jbrArchive: () -> File,
+    ): PreparedDistribution {
+        target.absoluteFile.parentFile.mkdirs()
+        RandomAccessFile(File(target.absoluteFile.parentFile, "${target.name}.lock"), "rw").use { lockFile ->
+            lockFile.channel.lock().use {
+                read(target)?.takeIf { it.platform == platform && it.mpsVersion == mpsVersion && it.jbrVersion == jbrVersion }
+                    ?.let { return it }
+                return prepare(target, platform, mpsVersion, jbrVersion, mpsArchive(), jbrArchive())
+            }
+        }
+    }
 
     /** reads the marker of a prepared distribution; null if [root] holds none or a broken one */
     fun read(root: File): PreparedDistribution? {

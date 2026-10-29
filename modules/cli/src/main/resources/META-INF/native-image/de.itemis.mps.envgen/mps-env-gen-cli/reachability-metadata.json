@@ -1,6 +1,7 @@
 {
   "resources": [
     { "glob": "templates/**" },
-    { "glob": "mps-env-gen-version.txt" }
+    { "glob": "mps-env-gen-version.txt" },
+    { "glob": "mps-versions.txt" }
   ]
 }

@@ -178,7 +178,9 @@ class CommandsTest {
     fun `create prepares MPS, enables debugging and prints the start command`() {
         run("create", "2026.1")
 
-        val dist = File(target, Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os))
+        // shared by all environments in the cache folder, not next to the environment
+        val dist = File(tmp, "cache/distributions/" + Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os))
+        assertFalse(File(target, dist.name).exists())
         assertTrue(File(dist, PreparedDistribution.MARKER_FILE).isFile)
         assertTrue(File(dist, platform.homePath).normalize().path in script("2026.1").readText())
         assertTrue(script("2026.1").path in output, output.toString())
@@ -198,7 +200,9 @@ class CommandsTest {
         val second = props(env("second"))
         // debugging is off: both keep the base port, the start script picks a free one with -d
         assertEquals(first.getProperty("debug.port"), second.getProperty("debug.port"))
-        assertNotEquals(first.getProperty("httpPort"), second.getProperty("httpPort"))
+        // no fixed node URL port: the start scripts pick a free one at every start
+        assertNull(first.getProperty("httpPort"))
+        assertNull(second.getProperty("httpPort"))
         assertEquals(2, server.downloads.get(), "MPS and JBR are downloaded and prepared once")
 
         val e = assertThrows<CliktError> { run("create", "2026.1") }
@@ -227,6 +231,19 @@ class CommandsTest {
         val created = File(tmp, "temp").listFiles()!!.single { it.name.startsWith("2026.1-") }
         assertTrue(Regex("""2026\.1-\d{8}-\d{6}""").matches(created.name))
         assertTrue(script(created.name, created).isFile)
+
+        // the cache, not the size limited temp folder
+        val dist = Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os)
+        assertFalse(File(tmp, "temp/$dist").exists())
+        assertTrue(File(tmp, "cache/distributions/$dist/${PreparedDistribution.MARKER_FILE}").isFile)
+        assertTrue(File(tmp, "cache/downloads/com/jetbrains/mps").isDirectory)
+        assertTrue(File(tmp, "cache/distributions/$dist").path in script(created.name, created).readText())
+
+        // a second throw-away environment and its refresh reuse it
+        run("create", "2026.1", "--temp", "--name", "second")
+        run("refresh", File(tmp, "temp/second").path)
+        assertFalse(File(tmp, "temp/$dist").exists())
+        assertEquals(2, server.downloads.get(), "MPS and JBR are downloaded once")
     }
 
     @Test
@@ -304,7 +321,24 @@ class CommandsTest {
         assertTrue(copy.path in File(copy, "mps/idea.properties").readText())
         assertEquals("false", props(copy).getProperty("debug"))
         assertTrue(props(copy).getProperty("history.0").contains("copied from"))
-        assertNotEquals(props(env("2026.1")).getProperty("httpPort"), props(copy).getProperty("httpPort"))
+        assertNull(props(copy).getProperty("httpPort"))
+    }
+
+    @Test
+    fun `http port is fixed only on request`() {
+        run("create", "2026.1")
+        assertNull(props(env("2026.1")).getProperty("httpPort"))
+        assertFalse("http port" in output, output.toString())
+        assertTrue("HTTP_PORT=\"\"" in script("2026.1").readText())
+
+        run("refresh", "2026.1", "--http-port", "63400")
+        assertEquals("63400", props(env("2026.1")).getProperty("httpPort"))
+        assertTrue("HTTP_PORT=\"63400\"" in script("2026.1").readText())
+        assertTrue("http port  63400 (fixed)" in output, output.toString())
+
+        run("refresh", "2026.1", "--http-port", "auto")
+        assertNull(props(env("2026.1")).getProperty("httpPort"))
+        assertThrows<CliktError> { run("refresh", "2026.1", "--http-port", "nope") }
     }
 
     @Test
@@ -331,14 +365,15 @@ class CommandsTest {
 
         val moved = File(tmp, "elsewhere/b").apply { parentFile.mkdirs() }
         env("a").renameTo(moved)
-        File(target, Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os)).deleteRecursively()
+        val dist = File(tmp, "cache/distributions/" + Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os))
+        dist.deleteRecursively()
 
         run("refresh", moved.path)
         assertEquals("user", laf.let { File(moved, "mps/config/options/laf.xml") }.readText())
         assertTrue(moved.path in File(moved, "mps/idea.properties").readText())
         assertTrue(script("b", moved).isFile)
-        // the distribution is prepared next to the environment again (download cache reused)
-        assertTrue(File(moved.parentFile, Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os)).isDirectory)
+        // the deleted distribution is prepared in the cache again from the cached downloads
+        assertTrue(File(dist, PreparedDistribution.MARKER_FILE).isFile)
         assertEquals(2, server.downloads.get())
     }
 
@@ -377,6 +412,18 @@ class CommandsTest {
     fun `prints completion scripts`() {
         val e = assertThrows<CliktError> { MpsEnvGenCommand(services).parse(listOf("completion", "bash")) }
         assertTrue("complete" in e.message!!)
+        // without installations folder <mps> completes the packaged versions, no network needed
+        assertTrue(Regex("""names=\([^)]*\b2022\.2\b[^)]*\b2026\.1\b[^)]*\)""").containsMatchIn(e.message!!), e.message)
+        // installations complete as versions taken from their folder names
+        assertTrue("BASH_REMATCH[2]" in e.message!!, e.message)
+    }
+
+    @Test
+    fun `packaged MPS versions are supported, ordered and parseable`() {
+        val versions = PackagedMpsVersions.all.map(MpsVersion::parse)
+        assertTrue(versions.size > 10, versions.toString())
+        assertTrue(versions.all { it >= MpsVersion.FIRST_SUPPORTED }, versions.toString())
+        assertEquals(versions.sorted(), versions)
     }
 
     @Test

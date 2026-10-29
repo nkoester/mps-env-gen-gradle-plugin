@@ -38,6 +38,27 @@ class EnvironmentGeneratorTest {
     }
 
     @Test
+    fun `usage statistics are off regardless of the machine-wide consent`() {
+        val spec = spec()
+        EnvironmentGenerator().generate(spec)
+        val vmoptions = File(spec.mpsConfigDir, "mps64.vmoptions").readLines()
+        assertTrue("-Didea.suppress.statistics.report=true" in vmoptions, vmoptions.toString())
+        assertTrue("-Didea.disable.collect.statistics=true" in vmoptions, vmoptions.toString())
+    }
+
+    @Test
+    fun `the folder of the environments ignores itself in git`() {
+        val spec = spec()
+        EnvironmentGenerator().generate(spec)
+        val ignore = File(spec.targetPath, ".gitignore")
+        assertEquals("*", ignore.readLines().last())
+
+        ignore.writeText("mine\n")
+        EnvironmentGenerator().generate(spec.copy(environmentName = "other"))
+        assertEquals("mine\n", ignore.readText(), "a changed file is kept")
+    }
+
+    @Test
     fun `refreshes only the start scripts`() {
         val spec = spec(project = File(tmp, "project").apply { mkdirs() })
         EnvironmentGenerator().generate(spec)

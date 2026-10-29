@@ -92,7 +92,8 @@ object EnvironmentMetadata {
             xms = get("xms") ?: template.xms,
             xmx = get("xmx") ?: template.xmx,
             ratio = get("ratio")?.toIntOrNull() ?: template.ratio,
-            httpPort = get("httpPort")?.toIntOrNull() ?: template.httpPort,
+            // absent: chosen by the start scripts
+            httpPort = get("httpPort")?.toIntOrNull(),
             vmOptions = list("vmOption"),
             debug = get("debug")?.toBoolean() ?: template.debug,
             debugPort = get("debug.port")?.toIntOrNull() ?: template.debugPort,

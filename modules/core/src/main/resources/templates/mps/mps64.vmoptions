@@ -43,6 +43,9 @@
 -Didea.initially.ask.config=true
 -Dperformance.watcher.freeze.report=false
 -Didea.log.config.file=log.xml
+#No usage statistics, independent of the machine-wide consent: never sent, and not collected (MPS 2023.3+)
+-Didea.suppress.statistics.report=true
+-Didea.disable.collect.statistics=true
 #Port for opening nodes from URLs (http://127.0.0.1:<port>/node); the start script moves it to a free one
 -Dide.httpsupport.internalPort=REPLACE_ME__HTTP_PORT
 REPLACE_ME__DEBUGENABLE-agentlib:jdwp=transport=dt_socket,server=y,suspend=REPLACE_ME__SUSPEND,address=127.0.0.1:REPLACE_ME__DEBUGPORT

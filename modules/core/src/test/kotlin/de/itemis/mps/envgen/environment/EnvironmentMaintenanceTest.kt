@@ -45,10 +45,10 @@ class EnvironmentMaintenanceTest {
         val target = File(tmp, ".mpsconfig")
         EnvironmentMetadata.write(spec("a").copy(httpPort = 63320, debug = true, debugPort = 51337))
         val used = Ports.usedBySiblings(target)
-        assertEquals(setOf(63320), used.http)
+        assertEquals(setOf(51337), used.debug)
         assertEquals(51338, Ports.allocate(Ports.DEBUG_BASE, used.debug) { true })
         assertEquals(51339, Ports.allocate(Ports.DEBUG_BASE, used.debug) { it != 51338 })
-        assertEquals(emptySet(), Ports.usedBySiblings(target, exclude = File(target, "a")).http)
+        assertEquals(emptySet<Int>(), Ports.usedBySiblings(target, exclude = File(target, "a")).debug)
     }
 
     @Test
@@ -125,22 +125,41 @@ class EnvironmentMaintenanceTest {
 
     @Test
     @EnabledOnOs(JUnitOS.LINUX)
-    fun `start script moves the node URL port to a free one`() {
-        val mps = File(tmp, "mps")
-        File(mps, "bin/mps.sh").apply {
-            parentFile.mkdirs()
-            writeText("#!/bin/sh\ngrep internalPort \"\$IDEA_VM_OPTIONS\"\n")
-            setExecutable(true)
-        }
+    fun `start script refuses a busy fixed node URL port`() {
+        fakeMps()
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { busy ->
-            val spec = spec().copy(httpPort = busy.localPort)
-            EnvironmentGenerator().generate(spec)
-            val script = File(spec.environmentDir, EnvironmentGenerator.startScriptName(OS.LINUX, "Default"))
-            val process = ProcessBuilder(script.path).redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(File("/dev/null"))).start()
-            val output = process.inputStream.bufferedReader().readText()
-            check(process.waitFor(30, TimeUnit.SECONDS))
-            assertTrue("-Dide.httpsupport.internalPort=${busy.localPort + 1}" in output, output)
+            val (exitCode, output) = startScript(spec().copy(httpPort = busy.localPort))
+            assertEquals(1, exitCode, output)
+            assertTrue("node URL port ${busy.localPort} (fixed for this environment) is in use" in output, output)
+            assertFalse("internalPort" in output, "MPS must not be started: $output")
         }
+    }
+
+    @Test
+    @EnabledOnOs(JUnitOS.LINUX)
+    fun `start script picks the node URL port at every start`() {
+        fakeMps()
+        val (exitCode, output) = startScript(spec())
+        assertEquals(0, exitCode, output)
+        val port = Regex("""Node URL port: (\d+) \(first free from ${Ports.HTTP_BASE}\)""").find(output)?.groupValues?.get(1)
+        assertTrue(port != null && port.toInt() in Ports.HTTP_BASE..Ports.HTTP_BASE + 20, output)
+        assertTrue("-Dide.httpsupport.internalPort=$port" in output, output)
+    }
+
+    /** MPS replaced by a script printing the node URL port it would get */
+    private fun fakeMps() = File(tmp, "mps/bin/mps.sh").apply {
+        parentFile.mkdirs()
+        writeText("#!/bin/sh\ngrep internalPort \"\$IDEA_VM_OPTIONS\"\n")
+        setExecutable(true)
+    }
+
+    private fun startScript(spec: EnvironmentSpec): Pair<Int, String> {
+        EnvironmentGenerator().generate(spec)
+        val script = File(spec.environmentDir, EnvironmentGenerator.startScriptName(OS.LINUX, spec.environmentName))
+        val process = ProcessBuilder(script.path).redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(File("/dev/null"))).start()
+        val output = process.inputStream.bufferedReader().readText()
+        check(process.waitFor(30, TimeUnit.SECONDS))
+        return process.exitValue() to output
     }
 
     @Test

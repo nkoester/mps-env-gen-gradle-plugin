@@ -56,7 +56,8 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     @get:Input abstract val xms: Property<String>
     @get:Input abstract val xmx: Property<String>
     @get:Input abstract val ratio: Property<Int>
-    @get:Input abstract val httpPort: Property<Int>
+    /** fixed node URL port; unset: the start scripts take the first free one at every start */
+    @get:Input @get:Optional abstract val httpPort: Property<Int>
     @get:Input abstract val debug: Property<Boolean>
     @get:Input abstract val debugPort: Property<Int>
     @get:Input abstract val debugSuspend: Property<Boolean>
@@ -100,7 +101,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 xms = xms.get(),
                 xmx = xmx.get(),
                 ratio = ratio.get(),
-                httpPort = httpPort.get(),
+                httpPort = httpPort.orNull,
                 vmOptions = vmOptions.get(),
                 debug = debug.get(),
                 debugPort = debugPort.get(),

@@ -4,9 +4,12 @@ import de.itemis.mps.envgen.distribution.JbrResolutionException
 import de.itemis.mps.envgen.distribution.MpsVersion
 import de.itemis.mps.envgen.distribution.Platform
 import de.itemis.mps.envgen.distribution.resolveJbr
+import de.itemis.mps.envgen.distributionsDir
+import de.itemis.mps.envgen.userCacheDir
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
+import java.io.File
 
 /** registers one [PrepareMpsDistributionTask] per MPS version, shared by all environments using that version */
 internal class DistributionTasks(private val project: Project, private val settings: MpsEnvironmentsExtension) {
@@ -48,7 +51,13 @@ internal class DistributionTasks(private val project: Project, private val setti
             jbrVersion.set(project.provider { jbr.value.resolution.version.toString() })
             mpsArchive.from(project.provider { source.mpsArchive(mpsVersion) })
             jbrArchive.from(project.provider { jbr.value.archive })
-            distributionDir.set(settings.targetPath.dir(Platform.distributionDirName(mpsVersion, platform.os)))
+            val name = Platform.distributionDirName(mpsVersion, platform.os)
+            // shared with other projects and the CLI unless kept in the target path
+            val providers = project.providers
+            val inCache = project.layout.dir(providers.provider {
+                File(distributionsDir(userCacheDir(getenv = { providers.environmentVariable(it).orNull })), name)
+            })
+            distributionDir.set(settings.mpsInTargetPath.flatMap { inTarget -> if (inTarget) settings.targetPath.dir(name) else inCache })
         }
     }
 }

@@ -33,8 +33,11 @@ data class EnvironmentSpec(
     val xms: String = "1024m",
     val xmx: String = "2048m",
     val ratio: Int = 4,
-    /** first port for opening nodes from URLs; the start scripts take the next free one */
-    val httpPort: Int = 63321,
+    /**
+     * fixed port for opening nodes from URLs; the start scripts refuse to start if it is in use. null: the start
+     * scripts take the first free one from [Ports.HTTP_BASE] at every start
+     */
+    val httpPort: Int? = null,
     val vmOptions: List<String> = emptyList(),
     val debug: Boolean = false,
     val debugPort: Int = 5071,
@@ -132,6 +135,7 @@ class EnvironmentGenerator(
         val stored = EnvironmentMetadata.read(spec.environmentDir, spec)?.spec
         spec.environmentDir.mkdirs()
         spec.mpsConfigDir.mkdirs()
+        ignoreInGit(spec.targetPath)
         writeCreationTimestamp(spec)
 
         val files = UserFiles(spec, parts, overwrite)
@@ -160,6 +164,17 @@ class EnvironmentGenerator(
     }
 
     /** only rewrites the start scripts of an existing environment, keeping its configuration */
+    /**
+     * environments are machine specific (absolute paths, caches, personal settings), so the folder of the environments
+     * ignores itself in git, without touching the project's .gitignore. Written once; a changed file is kept.
+     */
+    private fun ignoreInGit(targetPath: File) {
+        val file = File(targetPath, ".gitignore")
+        if (file.exists()) return
+        file.writeText("# written by mps-env-gen: generated MPS environments are local and not checked in\n*\n")
+        info("Wrote $file")
+    }
+
     fun refreshStartScripts(spec: EnvironmentSpec) {
         require(spec.environmentDir.isDirectory) { "Environment ${spec.environmentDir} does not exist" }
         generate(spec, setOf(EnvironmentPart.START_SCRIPTS, EnvironmentPart.METADATA))
@@ -238,7 +253,8 @@ class EnvironmentGenerator(
                 .replace("REPLACE_ME__XMX_VALUE", spec.xmx)
                 .replace("REPLACE_ME__XMS_VALUE", spec.xms)
                 .replace("REPLACE_ME__RATIO_VALUE", "${spec.ratio}")
-                .replace("REPLACE_ME__HTTP_PORT", "${spec.httpPort}")
+                // only a first value; the start scripts set the port of every start
+                .replace("REPLACE_ME__HTTP_PORT", "${spec.httpPort ?: Ports.HTTP_BASE}")
                 .replace("REPLACE_ME__DEBUGENABLE", "#")
                 .replace("REPLACE_ME__DEBUGPORT", "${spec.debugPort}")
                 .replace("REPLACE_ME__SUSPEND", "n")
@@ -376,7 +392,8 @@ class EnvironmentGenerator(
                         "JAVA_HOME" to (spec.javaHome?.toString() ?: ""),
                         "ENVIRONMENT_NAME" to spec.environmentName,
                         "MISSING_MPS_HINT" to spec.missingMpsHint,
-                        "HTTP_PORT" to "${spec.httpPort}",
+                        "HTTP_PORT" to (spec.httpPort?.toString() ?: ""),
+                        "HTTP_PORT_BASE" to "${Ports.HTTP_BASE}",
                         // debugging can also be enabled per start with -d, so the port is always set
                         "DEBUG_ENABLED" to "${spec.debug}",
                         "DEBUG_PORT" to "${spec.debugPort}",

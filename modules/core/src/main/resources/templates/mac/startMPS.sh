@@ -20,7 +20,9 @@ MISSING_MPS_HINT="REPLACE_ME__MISSING_MPS_HINT"
 DEBUG_ENABLED="REPLACE_ME__DEBUG_ENABLED"
 DEBUG_PORT="REPLACE_ME__DEBUG_PORT"
 DEBUG_SUSPEND="REPLACE_ME__DEBUG_SUSPEND"
+# fixed node URL port, must be free; empty: the first free one from HTTP_PORT_BASE
 HTTP_PORT="REPLACE_ME__HTTP_PORT"
+HTTP_PORT_BASE="REPLACE_ME__HTTP_PORT_BASE"
 
 for arg in "$@"; do
     case "${arg}" in -d|--debug) DEBUG_ENABLED="true" ;; esac
@@ -84,14 +86,24 @@ firstFreePort() {
 }
 
 # mps64.vmoptions belongs to the user; only the node URL port line is kept up to date (several MPS instances
-# must not share it). The line is added if it was removed.
+# must not share it). The line is added if it was removed. MPS is not started without a free port.
 updateNodeUrlPort() {
     file="${CONFIG_MPS_PATH}/mps64.vmoptions"
     key="-Dide.httpsupport.internalPort="
     found=0
-    if ! port="$(firstFreePort "${HTTP_PORT}")"; then
-        printf "WARNING: no free port in %s-%s, MPS will not open nodes from URLs\n" "${HTTP_PORT}" "$(( HTTP_PORT + 20 ))"
+    if [ -n "${HTTP_PORT}" ]; then
+        if isPortInUse "${HTTP_PORT}"; then
+            printf "ERROR: node URL port %s (fixed for this environment) is in use; MPS is not started.\n" "${HTTP_PORT}" >&2
+            printf "Stop what uses it or regenerate the environment with another or no fixed port.\n" >&2
+            exit 1
+        fi
         port="${HTTP_PORT}"
+        origin="fixed"
+    elif port="$(firstFreePort "${HTTP_PORT_BASE}")"; then
+        origin="first free from ${HTTP_PORT_BASE}"
+    else
+        printf "ERROR: no free node URL port in %s-%s; MPS is not started.\n" "${HTTP_PORT_BASE}" "$(( HTTP_PORT_BASE + 20 ))" >&2
+        exit 1
     fi
     while IFS= read -r line || [ -n "${line}" ]; do
         case "${line}" in "${key}"*) line="${key}${port}"; found=1 ;; esac
@@ -99,7 +111,7 @@ updateNodeUrlPort() {
     done < "${file}" > "${file}.tmp"
     [ "${found}" = 1 ] || printf '%s\n' "${key}${port}" >> "${file}.tmp"
     mv "${file}.tmp" "${file}"
-    printf "Node URL port: %s (http://127.0.0.1:%s/node)\n" "${port}" "${port}"
+    printf "Node URL port: %s (%s)  http://127.0.0.1:%s/node\n" "${port}" "${origin}" "${port}"
 }
 
 # debugging is decided here (configured or -d); only then MPS starts from a copy with the jdwp line on a free port,
@@ -148,6 +160,9 @@ if [ -n "${JAVA_HOME_CANDIDATE}" ] && [ -d "${JAVA_HOME_CANDIDATE}" ]; then
     export MPS_JDK
 fi
 
-printf "Calling MPS via ...\n >>> MPS_PROPERTIES=%s IDEA_VM_OPTIONS=%s MPS_JDK=%s %s\n" \
-    "${MPS_PROPERTIES}" "${IDEA_VM_OPTIONS}" "${MPS_JDK:-}" "${MPS_PATH}/${MPS_LAUNCHER}"
+# one part per line
+printf '\nCalling MPS:\n    MPS_PROPERTIES=%s \\\n    IDEA_VM_OPTIONS=%s \\\n    MPS_VM_OPTIONS=%s \\\n' \
+    "${MPS_PROPERTIES}" "${IDEA_VM_OPTIONS}" "${MPS_VM_OPTIONS}"
+if [ -n "${MPS_JDK:-}" ]; then printf '    MPS_JDK=%s \\\n' "${MPS_JDK}"; fi
+printf '    %s\n\n' "${MPS_PATH}/${MPS_LAUNCHER}"
 exec "${MPS_PATH}/${MPS_LAUNCHER}"

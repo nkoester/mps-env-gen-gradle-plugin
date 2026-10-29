@@ -29,7 +29,9 @@ MISSING_MPS_HINT="REPLACE_ME__MISSING_MPS_HINT"
 DEBUG_ENABLED="REPLACE_ME__DEBUG_ENABLED"
 DEBUG_PORT="REPLACE_ME__DEBUG_PORT"
 DEBUG_SUSPEND="REPLACE_ME__DEBUG_SUSPEND"
+# fixed node URL port, must be free; empty: the first free one from HTTP_PORT_BASE
 HTTP_PORT="REPLACE_ME__HTTP_PORT"
+HTTP_PORT_BASE="REPLACE_ME__HTTP_PORT_BASE"
 
 MODE=""
 for arg in "$@"; do
@@ -95,12 +97,22 @@ function firstFreePort {
 }
 
 # mps64.vmoptions belongs to the user; only the node URL port line is kept up to date (several MPS instances
-# must not share it). The line is added if it was removed.
+# must not share it). The line is added if it was removed. MPS is not started without a free port.
 function updateNodeUrlPort {
-    local file="${CONFIG_MPS_PATH}/mps64.vmoptions" key="-Dide.httpsupport.internalPort=" port line found=0
-    if ! port="$(firstFreePort "${HTTP_PORT}")"; then
-        printf "WARNING: no free port in %s-%s, MPS will not open nodes from URLs\n" "${HTTP_PORT}" "$(( HTTP_PORT + 20 ))"
+    local file="${CONFIG_MPS_PATH}/mps64.vmoptions" key="-Dide.httpsupport.internalPort=" port origin line found=0
+    if [[ -n "${HTTP_PORT}" ]]; then
+        if isPortInUse "${HTTP_PORT}"; then
+            printf "ERROR: node URL port %s (fixed for this environment) is in use; MPS is not started.\n" "${HTTP_PORT}" >&2
+            printf "Stop what uses it or regenerate the environment with another or no fixed port.\n" >&2
+            exit 1
+        fi
         port="${HTTP_PORT}"
+        origin="fixed"
+    elif port="$(firstFreePort "${HTTP_PORT_BASE}")"; then
+        origin="first free from ${HTTP_PORT_BASE}"
+    else
+        printf "ERROR: no free node URL port in %s-%s; MPS is not started.\n" "${HTTP_PORT_BASE}" "$(( HTTP_PORT_BASE + 20 ))" >&2
+        exit 1
     fi
     while IFS= read -r line || [[ -n "${line}" ]]; do
         if [[ "${line}" == "${key}"* ]]; then line="${key}${port}"; found=1; fi
@@ -108,7 +120,7 @@ function updateNodeUrlPort {
     done < "${file}" > "${file}.tmp"
     (( found )) || printf '%s\n' "${key}${port}" >> "${file}.tmp"
     mv "${file}.tmp" "${file}"
-    printf "Node URL port: %s (http://127.0.0.1:%s/node)\n" "${port}" "${port}"
+    printf "Node URL port: %s (%s)  http://127.0.0.1:%s/node\n" "${port}" "${origin}" "${port}"
 }
 
 # debugging is decided here (configured or -d); only then MPS starts from a copy with the jdwp line on a free port,
@@ -158,17 +170,33 @@ if [[ -n "${JAVA_HOME_CANDIDATE}" && -d "${JAVA_HOME_CANDIDATE}" ]]; then
 fi
 
 # a tmux server does not inherit this environment, so it is passed on the command line
+MPS_COMMAND=("MPS_PROPERTIES=${MPS_PROPERTIES}" "IDEA_VM_OPTIONS=${IDEA_VM_OPTIONS}" "MPS_VM_OPTIONS=${MPS_VM_OPTIONS}"
+    "_JAVA_AWT_WM_NONREPARENTING=1")
+[[ -n "${MPS_JDK:-}" ]] && MPS_COMMAND+=("MPS_JDK=${MPS_JDK}")
+MPS_COMMAND+=("${MPS_PATH}/${MPS_LAUNCHER}")
+
+# one line, as tmux runs it
 function mpsCommand {
-    local cmd
-    cmd="$(printf 'MPS_PROPERTIES=%q IDEA_VM_OPTIONS=%q MPS_VM_OPTIONS=%q _JAVA_AWT_WM_NONREPARENTING=1' \
-        "${MPS_PROPERTIES}" "${IDEA_VM_OPTIONS}" "${MPS_VM_OPTIONS}")"
-    [[ -n "${MPS_JDK:-}" ]] && cmd+="$(printf ' MPS_JDK=%q' "${MPS_JDK}")"
-    printf '%s %q' "${cmd}" "${MPS_PATH}/${MPS_LAUNCHER}"
+    local part line=""
+    for part in "${MPS_COMMAND[@]}"; do line+="${line:+ }$(printf '%q' "${part}")"; done
+    printf '%s' "${line}"
+}
+
+# one part per line; still a valid command to copy
+function printMpsCommand {
+    local i last=$(( ${#MPS_COMMAND[@]} - 1 ))
+    printf "\nCalling MPS:\n"
+    for (( i = 0; i <= last; i++ )); do
+        printf '    %q' "${MPS_COMMAND[i]}"
+        if (( i < last )); then printf ' \\'; fi
+        printf '\n'
+    done
+    printf '\n'
 }
 
 function tmuxd {
-    printf "Spawning tmux session with name '%s'\n" "${CONFIG_TMUX_SESSION_NAME}"
-    printf "Calling MPS via ...\n >>> %s\n" "$(mpsCommand)"
+    printMpsCommand
+    printf "Spawning tmux session '%s'\n" "${CONFIG_TMUX_SESSION_NAME}"
     tmux new-session -d -s "${CONFIG_TMUX_SESSION_NAME}" "$(mpsCommand)"
 }
 
@@ -205,6 +233,6 @@ else
         printf ' --> Unknown argument %s - starting MPS directly in this terminal\n' "${MODE}"
         printf '     Alternative arguments are: tmuxD, tmuxA, tmuxLD, and tmuxLA\n\n'
     fi
-    printf "Calling MPS via ...\n >>> %s\n\n" "$(mpsCommand)"
+    printMpsCommand
     exec "${MPS_PATH}/${MPS_LAUNCHER}"
 fi

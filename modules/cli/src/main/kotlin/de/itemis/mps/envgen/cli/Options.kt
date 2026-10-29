@@ -1,6 +1,7 @@
 package de.itemis.mps.envgen.cli
 
 import com.github.ajalt.clikt.parameters.groups.OptionGroup
+import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
@@ -11,7 +12,9 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.core.UsageError
+import de.itemis.mps.envgen.CACHE_ENV
 import de.itemis.mps.envgen.OS
+import de.itemis.mps.envgen.userCacheDir
 import de.itemis.mps.envgen.environment.EnvironmentPart
 import de.itemis.mps.envgen.environment.EnvironmentSpec
 import de.itemis.mps.envgen.environment.Ports
@@ -26,8 +29,11 @@ class MpsSourceOptions : OptionGroup("MPS source") {
     val noDownload by option("--no-download", help = "never download MPS").flag()
     val repository by option("--repository", envvar = "MPS_ENV_GEN_REPOSITORY", help = "Maven repository with MPS and JBR")
         .default(NexusArtifactSource.DEFAULT_URL)
-    val cacheDir by option("--cache-dir", envvar = "MPS_ENV_GEN_CACHE", help = "download cache, can be cleaned by hand")
-        .file(canBeFile = false).default(File(System.getProperty("user.home"), "Downloads/mps-env-gen"))
+    val cacheDir by option("--cache-dir", envvar = CACHE_ENV,
+        help = "downloads and prepared MPS, shared by all environments; can be cleaned by hand")
+        .file(canBeFile = false).default(userCacheDir())
+    val mpsInTarget by option("--mps-in-target",
+        help = "prepare MPS from Nexus in the target folder (mps-<version>-<OS>) instead of the shared cache folder").flag()
     val jbrVersion by option("--jbr-version", help = "JBR for a downloaded MPS (default: derived from the MPS version)")
 }
 
@@ -44,7 +50,13 @@ class SettingsOptions : OptionGroup("Environment settings") {
     // nullable flags instead of switches: switches cannot be read from the defaults file
     val debugSuspend by option("--debug-suspend", help = "suspend MPS until a debugger is attached")
         .nullableFlag("--no-debug-suspend")
-    val httpPort by option("--http-port", help = "first port for opening nodes from URLs; the start script takes the next free one (default: ${Ports.HTTP_BASE})").int()
+    val httpPort by option("--http-port", metavar = "PORT|auto",
+        help = "fixed port for opening nodes from URLs, MPS does not start if it is in use; auto: the start script takes " +
+            "the first free one from ${Ports.HTTP_BASE} (default)")
+        .convert { value ->
+            if (value == "auto") AUTO_PORT
+            else value.toIntOrNull()?.takeIf { it in 1..65535 } ?: fail("'$value' is neither a port nor 'auto'")
+        }
     val theme by option("--theme", help = "UI theme").choice(mapOf("light" to Theme.LIGHT, "dark" to Theme.DARK))
     val xms by option("--xms", help = "initial heap, e.g. 1024m")
     val xmx by option("--xmx", help = "maximum heap, e.g. 4096m")
@@ -71,8 +83,7 @@ class SettingsOptions : OptionGroup("Environment settings") {
         if (vmOptions.isNotEmpty()) { result = result.copy(vmOptions = vmOptions); parts += EnvironmentPart.VM_OPTIONS }
         if (ideaProperties.isNotEmpty()) { result = result.copy(ideaProperties = ideaProperties); parts += EnvironmentPart.IDEA_PROPERTIES }
 
-        val http = httpPort ?: if (reallocatePorts) Ports.allocate(Ports.HTTP_BASE, usedPorts.http) else result.httpPort
-        result = result.copy(httpPort = http)
+        httpPort?.let { result = result.copy(httpPort = it.takeIf { port -> port != AUTO_PORT }) }
 
         result = when {
             noDebug -> result.copy(debug = false)
@@ -85,7 +96,7 @@ class SettingsOptions : OptionGroup("Environment settings") {
     }
 
     companion object {
-        /** `--debug` without port */
+        /** `--debug` without port, `--http-port auto` */
         const val AUTO_PORT = -1
     }
 }

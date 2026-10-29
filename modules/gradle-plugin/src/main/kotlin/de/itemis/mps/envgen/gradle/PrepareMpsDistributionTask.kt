@@ -45,7 +45,7 @@ abstract class PrepareMpsDistributionTask : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val jbrArchive: ConfigurableFileCollection
 
-    /** `<targetPath>/mps-<version>-<OS>` */
+    /** `<cache>/distributions/mps-<version>-<OS>`, or `<targetPath>/mps-<version>-<OS>` */
     @get:OutputDirectory
     abstract val distributionDir: DirectoryProperty
 
@@ -67,12 +67,19 @@ abstract class PrepareMpsDistributionTask : DefaultTask() {
     fun prepare() {
         val platform = platform().get()
         val target = distributionDir.get().asFile
-        logger.lifecycle("Preparing MPS ${mpsVersion.get()} with JBR ${jbrVersion.get()} (${platform.jbrClassifier}) in $target")
+        val version = MpsVersion.parse(mpsVersion.get())
+        val jbr = JbrVersion.parse(jbrVersion.get())
+        // the folder may be shared with other projects and the CLI, and Gradle knows only this project's history:
+        // a matching distribution is reused, never replaced (MPS may be running from it)
+        DistributionPreparer.read(target)?.takeIf { it.platform == platform && it.mpsVersion == version && it.jbrVersion == jbr }?.let {
+            logger.lifecycle("Using prepared MPS $version with JBR $jbr in $target")
+            return
+        }
+        logger.lifecycle("Preparing MPS $version with JBR $jbr (${platform.jbrClassifier}) in $target")
 
         // same JDK based extraction as the CLI; keeps JBR file modes and symlinks
-        val prepared = DistributionPreparer.prepare(
-            target, platform, MpsVersion.parse(mpsVersion.get()), JbrVersion.parse(jbrVersion.get()),
-            mpsArchive = mpsArchive.singleFile, jbrArchive = jbrArchive.singleFile,
+        val prepared = DistributionPreparer.prepareOrReuse(
+            target, platform, version, jbr, mpsArchive = { mpsArchive.singleFile }, jbrArchive = { jbrArchive.singleFile },
         )
         prepared.warnings.forEach { logger.warn("Warning: $it") }
         logger.lifecycle("MPS ${prepared.mpsVersion} prepared; launcher: ${prepared.launcher.path} (${prepared.launcher.kind.name.lowercase()})")
