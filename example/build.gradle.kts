@@ -1,4 +1,5 @@
-import de.itemis.mps.Utils
+import de.itemis.mps.envgen.OS
+import de.itemis.mps.envgen.environment.Theme
 import kotlin.io.path.Path
 
 plugins {
@@ -14,24 +15,24 @@ repositories {
 val myMpsPath = Path(project.layout.buildDirectory.get().toString(), "mps")
 val myDependencyPath = Path(project.layout.buildDirectory.get().toString(), "dependencies")
 
-val mps: Configuration by configurations.creating
-val mpsExtensions: Configuration by configurations.creating
+val mps: Configuration = configurations.create("mps")
+val mpsExtensions: Configuration = configurations.create("mpsExtensions")
 
 dependencies {
     mps(libs.mps)
     mpsExtensions(libs.mps.extensions)
 }
 
-val extractMps by tasks.registering(Copy::class) {
+val extractMps = tasks.register<Copy>("extractMps") {
     from({ mps.resolve().map { zipTree(it) } })
     into(myMpsPath)
 }
-val extractMPS_extensions by tasks.registering(Copy::class) {
+val extractMPS_extensions = tasks.register<Copy>("extractMPS_extensions") {
     from({ mpsExtensions.resolve().map { zipTree(it) } })
     into(myDependencyPath)
 }
 
-val setup by tasks.registering {
+val setup = tasks.register("setup") {
     group = "Setup"
     description = "Download and extract MPS and the all MPS dependencies."
     dependsOn(extractMps)
@@ -45,87 +46,44 @@ val setup by tasks.registering {
 val pathToYourMPSInstallation = Path("/vol/mps/MPS-2022.2.4-linux/").toFile()
 
 mpsEnvironments {
+    // defaults for all environments; use mpsVersion.set("2025.3") instead to download MPS from Nexus
     mpsPath.set(pathToYourMPSInstallation)
-    mpsProjectPath.set(project.layout.projectDirectory.dir("mps-project"))
-    environment("0-default"){
+    projectPath.set(project.layout.projectDirectory.dir("mps-project"))
 
-    }
+    environments {
+        register("0-default")
 
-    environment("1-special") {
-        // osToGenerate - specifies for which OS to generate a startup script
-        //                beware that generating for an OS with different paths
-        //                ('/' vs '\') will to broken environments!
-        osToGenerate = listOf<Utils.OS>(Utils.OS.LINUX, Utils.OS.MAC, Utils.OS.WINDOWS)
+        register("1-special") {
+            // start scripts to generate (default: current OS); scripts contain absolute paths of this machine
+            os.set(listOf(OS.LINUX, OS.MAC, OS.WINDOWS))
 
-        // you can overwrite the mpsPath and use any other MPS installation
-        mpsPathLocal.set(pathToYourMPSInstallation)
+            // any setting of the defaults can be overridden per environment
+            mpsPath.set(pathToYourMPSInstallation)
+            // projectPath.set(file("/some/other/mps/project/path/"))
 
-        // we could overwrite the project path for this environment if we wanted to
-        // mpsProjectPath.set(File("/some/other/mps/project/path/"))
+            httpPort.set(9292)
+            theme.set(Theme.LIGHT)                 // default: LIGHT
+            xms.set("2048m")                       // default: 1024m
+            xmx.set("4096m")                       // default: 2048m
+            ratio.set(8)                           // default: 4
+            modelCheckBeforeGeneration.set(false)  // default: false
 
-        // set certain MPS specific settings you would normally set in the mps64.vmoptions file
-        mpsSettings {
-            httpPort =9292
-
-            // lightTheme - if you really want to, you can use the dark theme (default: true)
-            lightTheme.set(true)
-            // set some important settings for MPS:
-            // xms   - 1024m
-            // xmx   - 2048m
-            // ratio - default: 4
-            xms.set("2048m")
-            xmx.set("4096m")
-            ratio.set(8)
-
-            // extraVmmArgs - allows to set anything extra. you can overwrite anything with this
-            extraVmmArgs.set(
-                project.objects.listProperty<String>().convention(
-                    listOf(
-                        "# This is an extra line in the vmargs file",
-                        "# And another ..."
-                    )
-                )
-            )
+            // additional lines of mps64.vmoptions and idea.properties
+            vmOptions.addAll("# This is an extra line in the vmoptions file", "# And another ...")
+            ideaProperties.add("# This is an extra line in the idea.properties file ...")
         }
 
-        // set certain IDEA specific settings for this environment
-        ideaSettings {
-            // anything else you would normally set in the idea.properties file
-            extraIdeaArgs.set(
-                listOf("# This is an extra line in the idea.prooperties file ...")
-            )
-        }
-    }
-
-    environment("2-debug") {
-        mpsSettings {
-            httpPort =9292
-            // debugEnabled - enable debugging for this environment
-            //                (default: false)
-            debugEnabled = true
-
-            // debugPort - enable debugging for this environment
-            //             (default: 5071)
-            debugPort = 1234
-
-            // debugSuspend - suspend until debugger is connected to MPS
-            //                (default: false)
-            debugSuspend = true
-
-            // if you want more control over debugging, set debugEnabled to false and use
-            // extraVmmArgs to add your own debugging line
-            // extraVmmArgs.set(
-            //    project.objects.listProperty<String>().convention(
-            //        listOf(
-            //            "-myHighly,specific-debugging,line",
-            //        )
-            //    )
-            //)
+        register("2-debug") {
+            httpPort.set(9293)
+            debug.set(true)          // default: false
+            debugPort.set(1234)      // default: 5071
+            debugSuspend.set(true)   // wait for a debugger (default: false)
+            // for full control, leave debug off and add your own line: vmOptions.add("-agentlib:jdwp=...")
         }
     }
 }
 
-val doAll by tasks.registering {
+val doAll = tasks.register("doAll") {
     dependsOn(setup)
     dependsOn("generateMpsEnvironmentAll")
 }

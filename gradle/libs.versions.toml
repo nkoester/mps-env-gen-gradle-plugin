@@ -1,6 +1,16 @@
 [versions]
-jvm = "2.0.21"
+jvm = "2.4.10"
+junit = "5.9.0"
+clikt = "5.1.0"
+graalvm-buildtools = "1.1.17"
+
+[libraries]
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+clikt-core = { module = "com.github.ajalt.clikt:clikt-core", version.ref = "clikt" }
 
 [plugins]
 jvm-gradle = { id = "jvm", version.ref = "jvm" }
 maven-publish = {id="maven-publish"}
+graalvm-native = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-buildtools" }

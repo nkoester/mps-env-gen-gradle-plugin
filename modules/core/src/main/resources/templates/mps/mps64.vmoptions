@@ -1,0 +1,48 @@
+#
+#
+# date: REPLACE_ME__GENERATION_DATE
+# version: REPLACE_ME__VERSION
+# description: This file automatically generated. Do not modify.
+#
+#
+-XmsREPLACE_ME__XMS_VALUE
+-XmxREPLACE_ME__XMX_VALUE
+-XX:NewRatio=REPLACE_ME__RATIO_VALUE
+-XX:ReservedCodeCacheSize=1024m
+-XX:+UseG1GC
+-XX:SoftRefLRUPolicyMSPerMB=50
+-XX:CICompilerCount=2
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:-OmitStackTraceInFastThrow
+-XX:+IgnoreUnrecognizedVMOptions
+-ea
+-Dsun.io.useCanonCaches=false
+-Dsun.java2d.metal=true
+-Djdk.http.auth.tunneling.disabledSchemes=""
+-Djdk.attach.allowAttachSelf=true
+-Djdk.module.illegalAccess.silent=true
+-Dkotlinx.coroutines.debug=off
+-Dsun.tools.attach.tmp.only=true
+#Additional MPS options:
+-client
+-Dfile.encoding=UTF-8
+-Dapple.awt.graphics.UseQuartz=true
+-Dide.mac.message.dialogs.as.sheets=false
+-Didea.invalidate.caches.invalidates.vfs=true
+-Didea.trust.disabled=false
+-Dfreeze.reporter.enabled=false
+-Didea.indices.psi.dependent.default=false
+#Defaults of mps-zookeeper:
+-Xss1024k
+-XX:NewSize=256m
+-Djava.net.preferIPv4Stack=true
+-Dsun.io.useCanonPrefixCache=false
+-Dawt.useSystemAAFontSettings=lcd
+-Dsun.java2d.renderer=sun.java2d.marlin.MarlinRenderingEngine
+-Dintellij.config.imported.in.current.session=true
+-Didea.initially.ask.config=true
+-Dperformance.watcher.freeze.report=false
+-Didea.log.config.file=log.xml
+#Port for opening nodes from URLs (http://127.0.0.1:<port>/node); the start script moves it to a free one
+-Dide.httpsupport.internalPort=REPLACE_ME__HTTP_PORT
+REPLACE_ME__DEBUGENABLE-agentlib:jdwp=transport=dt_socket,server=y,suspend=REPLACE_ME__SUSPEND,address=127.0.0.1:REPLACE_ME__DEBUGPORT

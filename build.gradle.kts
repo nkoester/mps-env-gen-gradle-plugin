@@ -1,24 +1,14 @@
-import java.io.BufferedReader
-import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
 
 
 plugins {
-    kotlin(libs.plugins.jvm.gradle.get().pluginId) version libs.plugins.jvm.gradle.get().version.toString()
-    alias(libs.plugins.maven.publish)
-    `java-gradle-plugin`
-    `kotlin-dsl`
-    `jvm-test-suite`
+    // one Kotlin Gradle plugin for all modules; kotlin-dsl (gradle-plugin) needs Gradle's embedded version
+    kotlin(libs.plugins.jvm.gradle.get().pluginId) version libs.plugins.jvm.gradle.get().version.toString() apply false
 }
 
-kotlin {
-    jvmToolchain(17)
+allprojects {
+    group = "de.itemis.mps.envgen"
 }
-
-java {
-    withSourcesJar()
-}
-
-group = "de.itemis.mps"
 version = if (projectDir.resolve("version.txt").exists()){
     projectDir.resolve("version.txt").readText().trim()
 } else {
@@ -26,50 +16,33 @@ version = if (projectDir.resolve("version.txt").exists()){
 }
 
 logger.lifecycle("Building version: $version")
+subprojects { version = rootProject.version }
 
-repositories {
-    maven(url = "https://artifacts.itemis.cloud/repository/maven-mps")
-    mavenLocal()
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.0")
-//    implementation("org.jetbrains.kotlin:kotlin-stdlib:2.2.20")
-}
-
-gradlePlugin {
-    plugins {
-        create("MpsEnvGenPlugin") {
-            id = "de.itemis.mps.mps-env-gen-gradle-plugin"
-            displayName = "Plugin to generate isolated MPS configurations and run environments"
-            description = "A plugin that allows you run your MPS project in isolated environments. Works for Linux/Windows/OSX."
-            tags = listOf("mps", "environment", "generation")
-            implementationClass = "de.itemis.mps.MpsEnvironmentGenerationPlugin"
-        }
+// write the version to the MANIFEST of all jars; read by the generator for its output
+allprojects {
+    tasks.withType<Jar>().configureEach {
+        manifest { attributes("Implementation-Version" to project.version) }
     }
 }
 
-// write the version to the MANIFEST
-tasks.jar {
-    manifest {
-        attributes("Implementation-Version" to version)
+
+// shared by all published modules (gradle-plugin, core)
+val publishToItemisCloud = gitBranch() == "main"
+allprojects {
+    plugins.withId("maven-publish") {
+        extensions.configure<PublishingExtension> { configureRepositories(project) }
     }
 }
 
-tasks.test {
-    maxParallelForks = 3
-    useJUnitPlatform()
-}
-
-
-publishing {
+fun PublishingExtension.configureRepositories(project: Project) {
     repositories {
         mavenLocal()
-        if(gitBranch() == "main") {
+        // release package: a Maven repository folder with exactly the release artifacts (see packagePlugin)
+        maven {
+            name = "release"
+            url = uri(rootProject.layout.buildDirectory.dir("release/maven"))
+        }
+        if (publishToItemisCloud) {
             maven {
                 name = "itemisCloud"
                 url = uri("https://artifacts.itemis.cloud/repository/maven-mps-releases/")
@@ -85,23 +58,80 @@ publishing {
 }
 
 fun gitBranch(hash: Boolean = false): String {
+    val args = if (hash) listOf("git", "rev-parse", "--short", "HEAD") else listOf("git", "rev-parse", "--abbrev-ref", "HEAD")
     return try {
-        val byteOut = ByteArrayOutputStream()
-        project.exec {
-            val theCommandLine = when (hash) {
-                true -> "git rev-parse --short HEAD"
-                false -> "git rev-parse --abbrev-ref HEAD"
-            }
-            commandLine = theCommandLine.split(" ")
-            standardOutput = byteOut
+        val result = providers.exec {
+            commandLine(args)
+            isIgnoreExitValue = true
         }
-        String(byteOut.toByteArray()).trim().also { if (it == "main") return "main" }
-            .also {
-            if (it == "HEAD")
-                logger.warn("Unable to determine current branch: Project is checked out with detached head!")
+        val output = result.standardOutput.asText.get().trim()
+        if (result.result.get().exitValue != 0) {
+            logger.warn("Unable to determine current branch: ${result.standardError.asText.get().trim()}")
+            return "Unknown Branch"
         }
+        if (output == "HEAD") logger.warn("Unable to determine current branch: Project is checked out with detached head!")
+        output
     } catch (e: Exception) {
         logger.warn("Unable to determine current branch: ${e.message}")
         "Unknown Branch"
+    }
+}
+
+tasks.register("buildCli") {
+    group = "build"
+    description = "Builds the mps-env-gen command line tool: runnable jar and distribution in modules/cli/build/install."
+    dependsOn(":cli:fatJar", ":cli:installDist")
+}
+
+tasks.register("buildNativeCli") {
+    group = "build"
+    description = "Optional: builds a native mps-env-gen for the current OS (GraalVM toolchain is provisioned automatically)."
+    dependsOn(":cli:nativeCompile")
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Release packaging
+//
+//   ./gradlew packagePlugin   # build/release/maven: plugin, plugin marker and core as Maven artifacts
+//   ./gradlew packageCli      # build/release/cli: see modules/cli/build.gradle.kts
+//   ./gradlew packageAll      # build + tests of all modules, both packages and SHA256SUMS
+// ---------------------------------------------------------------------------------------------------------------------
+
+val releaseDir = layout.buildDirectory.dir("release")
+
+val cleanRelease = tasks.register<Delete>("cleanRelease") {
+    group = "distribution"
+    description = "Deletes build/release."
+    delete(releaseDir)
+}
+
+allprojects {
+    tasks.withType<PublishToMavenRepository>().configureEach {
+        if (name.endsWith("ToReleaseRepository")) mustRunAfter(cleanRelease)
+    }
+    tasks.matching { it.name == "packageCli" }.configureEach { mustRunAfter(cleanRelease) }
+}
+
+tasks.register("packagePlugin") {
+    group = "distribution"
+    description = "Packages the Gradle plugin for a release into build/release/maven (plugin, plugin marker, core)."
+    dependsOn(cleanRelease, ":gradle-plugin:publishAllPublicationsToReleaseRepository", ":core:publishAllPublicationsToReleaseRepository")
+}
+
+tasks.register("packageAll") {
+    group = "distribution"
+    description = "Builds and tests all modules and packages the plugin and the CLI for a release into build/release."
+    dependsOn(":gradle-plugin:build", ":core:build", ":cli:build", "packagePlugin", ":cli:packageCli")
+    val cliDir = releaseDir.map { it.dir("cli") }
+    val root = releaseDir
+    doLast {
+        val files = cliDir.get().asFile.listFiles().orEmpty().filter { it.isFile && it.name != "SHA256SUMS" }.sortedBy { it.name }
+        cliDir.get().file("SHA256SUMS").asFile.writeText(files.joinToString("") { file ->
+            val digest = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+            "${digest.joinToString("") { "%02x".format(it) }}  ${file.name}\n"
+        })
+        logger.lifecycle("Release packages in ${root.get().asFile}:")
+        root.get().asFile.walkTopDown().filter { it.isFile }.sortedBy { it.path }
+            .forEach { logger.lifecycle("  ${it.relativeTo(root.get().asFile)}") }
     }
 }

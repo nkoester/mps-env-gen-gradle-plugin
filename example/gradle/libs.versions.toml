@@ -1,5 +1,5 @@
 [versions]
-mpsEnvGen = "0.0.3-SNAPSHOT"
+mpsEnvGen = "0.0.4-SNAPSHOT"
 mps = "2022.2.4"
 mpsExtensions = "2022.2.2988.736f389"
 
