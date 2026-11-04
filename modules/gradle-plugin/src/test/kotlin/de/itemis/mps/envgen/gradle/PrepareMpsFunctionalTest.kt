@@ -43,7 +43,7 @@ class PrepareMpsFunctionalTest {
         File(dir, "mps-project/.mps/.name").writeText("TestProject")
         File(dir, "build.gradle.kts").writeText(
             """
-            plugins { id("de.itemis.mps.mps-env-gen-gradle-plugin") }
+            plugins { id("de.itemis.mps.envgen") }
             repositories { maven { url = uri("${nexus.url}") } }
             mpsEnvironments {
                 projectPath.set(layout.projectDirectory.dir("mps-project"))

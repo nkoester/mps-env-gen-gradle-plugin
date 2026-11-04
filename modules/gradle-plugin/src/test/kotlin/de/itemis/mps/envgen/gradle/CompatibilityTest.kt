@@ -37,7 +37,7 @@ class CompatibilityTest {
         import de.itemis.mps.envgen.OS
         import de.itemis.mps.envgen.environment.Theme
 
-        plugins { id("de.itemis.mps.mps-env-gen-gradle-plugin") }
+        plugins { id("de.itemis.mps.envgen") }
         repositories { maven { url = uri("$repo") } }
 
         mpsEnvironments {
@@ -60,7 +60,7 @@ class CompatibilityTest {
         import de.itemis.mps.envgen.OS
         import de.itemis.mps.envgen.environment.Theme
 
-        plugins { id 'de.itemis.mps.mps-env-gen-gradle-plugin' }
+        plugins { id 'de.itemis.mps.envgen' }
         repositories { maven { url = uri('$repo') } }
 
         mpsEnvironments {

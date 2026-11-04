@@ -1,6 +1,6 @@
 # MPS Environment Generation Gradle Plugin
 
-❗❗ Work in progress, not yet released or published ❗❗
+❗❗ Work in progress: pre-releases only, published to GitHub Packages (see [1.0](#10-get-the-plugin)) ❗❗
 
 Generates isolated MPS environments: each has its own configuration, caches, plugins and start script, so several can run in parallel without touching your default MPS setup.
 Typical uses: several checkouts of one repository, reviewing a pull request.
@@ -15,6 +15,35 @@ Two front ends share one implementation: a Gradle plugin and a command line tool
 
 Requires Gradle 8.14+ on Java 17+ and supports the Kotlin and Groovy DSL.
 
+## 1.0 Get the plugin
+
+Releases are published to GitHub Packages, which needs a token even for reading:
+
+1. Create a classic token with only the scope `read:packages` at https://github.com/settings/tokens/new (fine-grained tokens do not work)
+2. Add it to `~/.gradle/gradle.properties`:
+   ```properties
+   gpr.user=<github user>
+   gpr.token=ghp_...
+   ```
+3. Add the repository to `settings.gradle.kts` (see `example/settings.gradle.kts`):
+   ```kts
+   pluginManagement {
+       repositories {
+           maven {
+               url = uri("https://maven.pkg.github.com/nkoester/mps-env-gen-gradle-plugin")
+               credentials {
+                   username = providers.gradleProperty("gpr.user").orNull
+                   password = providers.gradleProperty("gpr.token").orNull
+               }
+               content { includeGroup("de.itemis.mps.envgen") }   // plugin, its marker and core
+           }
+           gradlePluginPortal()
+       }
+   }
+   ```
+
+Versions: [releases](https://github.com/nkoester/mps-env-gen-gradle-plugin/releases), which also offer the CLI as zip and runnable jar.
+
 ## 1.1 Usage
 
 ### 1.1.1 Minimal Variant
@@ -22,11 +51,10 @@ Requires Gradle 8.14+ on Java 17+ and supports the Kotlin and Groovy DSL.
 Minimal setup in your build files for one environment `.mpsconfig/default` with MPS downloaded from Nexus:
 
 ```kts
-// settings.gradle.kts
-pluginManagement { repositories { maven("https://artifacts.itemis.cloud/repository/maven-mps"); gradlePluginPortal() } }
+// settings.gradle.kts: plugin repository, see 1.0
 
 // build.gradle.kts
-plugins { id("de.itemis.mps.mps-env-gen-gradle-plugin") version "<version>" }
+plugins { id("de.itemis.mps.envgen") version "<version>" }
 repositories { maven("https://artifacts.itemis.cloud/repository/maven-mps") }   // MPS and JBR downloads
 
 mpsEnvironments {

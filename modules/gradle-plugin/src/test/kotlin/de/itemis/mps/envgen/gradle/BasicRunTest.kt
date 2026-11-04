@@ -10,7 +10,7 @@ class BasicUnitTests {
     @Test
     fun `registers tasks without afterEvaluate`() {
         val project = ProjectBuilder.builder().build()
-        project.plugins.apply("de.itemis.mps.mps-env-gen-gradle-plugin")
+        project.plugins.apply("de.itemis.mps.envgen")
         val extension = project.extensions.getByType(MpsEnvironmentsExtension::class.java)
 
         assertNotNull(project.tasks.findByName("generateMpsEnvironmentAll"))

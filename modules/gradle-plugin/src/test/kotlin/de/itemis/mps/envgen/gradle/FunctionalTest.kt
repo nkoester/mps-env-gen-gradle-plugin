@@ -219,7 +219,7 @@ class FunctionalTest {
         import kotlin.io.path.Path
 
         plugins {
-            id("de.itemis.mps.mps-env-gen-gradle-plugin")
+            id("de.itemis.mps.envgen")
         }
 
 

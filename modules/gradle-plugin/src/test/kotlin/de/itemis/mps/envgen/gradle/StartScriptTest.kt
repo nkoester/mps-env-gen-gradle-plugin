@@ -43,7 +43,7 @@ class StartScriptTest {
         File(projectDir, "mps-path.txt").writeText(mpsDir.path)
         File(projectDir, "build.gradle.kts").writeText(
             """
-            plugins { id("de.itemis.mps.mps-env-gen-gradle-plugin") }
+            plugins { id("de.itemis.mps.envgen") }
             mpsEnvironments {
                 mpsPath.set(file(file("mps-path.txt").readText()))
                 javaHome.set(layout.projectDirectory.dir("jbr"))

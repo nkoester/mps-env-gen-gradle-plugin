@@ -29,7 +29,7 @@ dependencies {
 gradlePlugin {
     plugins {
         create("MpsEnvGenPlugin") {
-            id = "de.itemis.mps.mps-env-gen-gradle-plugin"
+            id = "de.itemis.mps.envgen"
             displayName = "Plugin to generate isolated MPS configurations and run environments"
             description = "A plugin that allows you run your MPS project in isolated environments. Works for Linux/Windows/OSX."
             tags = listOf("mps", "environment", "generation")
