@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.parse
 import com.sun.net.httpserver.HttpServer
 import de.itemis.mps.envgen.FakeNexus
 import de.itemis.mps.envgen.OS
+import de.itemis.mps.envgen.distribution.JbrResolver
 import de.itemis.mps.envgen.distribution.JbrVersion
 import de.itemis.mps.envgen.distribution.MpsVersion
 import de.itemis.mps.envgen.distribution.Platform
@@ -181,6 +182,7 @@ class CommandsTest {
         // shared by all environments in the cache folder, not next to the environment
         val dist = File(tmp, "cache/distributions/" + Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os))
         assertFalse(File(target, dist.name).exists())
+        assertTrue(File(dist.parentFile, ".${dist.name}.lock").isFile, "hidden lock file next to the distribution")
         assertTrue(File(dist, PreparedDistribution.MARKER_FILE).isFile)
         assertTrue(File(dist, platform.homePath).normalize().path in script("2026.1").readText())
         assertTrue(script("2026.1").path in output, output.toString())
@@ -325,6 +327,21 @@ class CommandsTest {
     }
 
     @Test
+    fun `update checks can be switched off and on again`() {
+        run("create", "2026.1", "--no-update-checks")
+        val updates = File(env("2026.1"), "mps/config/options/updates.xml")
+        val other = File(env("2026.1"), "mps/config/options/other.xml").apply { writeText("changed in MPS") }
+        assertTrue("<option name=\"CHECK_NEEDED\" value=\"false\" />" in updates.readText(), updates.readText())
+        assertTrue("<option name=\"PLUGINS_CHECK_NEEDED\" value=\"false\" />" in updates.readText())
+        assertEquals("false", props(env("2026.1")).getProperty("updateChecks"))
+
+        run("refresh", "2026.1", "--update-checks")
+        assertFalse("CHECK_NEEDED" in updates.readText(), updates.readText())
+        assertEquals("changed in MPS", other.readText(), "only updates.xml is rewritten")
+        assertEquals("true", props(env("2026.1")).getProperty("updateChecks"))
+    }
+
+    @Test
     fun `http port is fixed only on request`() {
         run("create", "2026.1")
         assertNull(props(env("2026.1")).getProperty("httpPort"))
@@ -409,6 +426,31 @@ class CommandsTest {
     }
 
     @Test
+    fun `short options in any order, optional values only attached`() {
+        run("create", "-t", "-s", "-n", "a", "2026.1")
+        assertEquals(listOf(script("a", File(tmp, "temp/a")) to emptyList<String>()), starts)
+        run("create", "2026.1", "-ts", "-n", "b")
+        assertEquals(script("b", File(tmp, "temp/b")) to emptyList<String>(), starts.last())
+
+        run("create", "--debug", "-n", "c", "2026.1")
+        assertEquals("true", props(env("c")).getProperty("debug"))
+        run("create", "-x5005", "-n", "d", "2026.1")
+        assertEquals("5005", props(env("d")).getProperty("debug.port"))
+        run("create", "--debug=5006", "-n", "e", "2026.1")
+        assertEquals("5006", props(env("e")).getProperty("debug.port"))
+        run("create", "-x=5007", "-n", "f", "2026.1")
+        assertEquals("5007", props(env("f")).getProperty("debug.port"))
+        assertThrows<CliktError> { run("create", "-n", "g", "2026.1", "-x=nope") }
+
+        if (OS.current == OS.LINUX) {
+            run("refresh", "c", "-s=tmuxLA", "-d")
+            assertEquals(script("c") to listOf("-d", "tmuxLA"), starts.last())
+            run("refresh", "c", "-stmuxD")
+            assertEquals(script("c") to listOf("tmuxD"), starts.last())
+        }
+    }
+
+    @Test
     fun `prints completion scripts`() {
         val e = assertThrows<CliktError> { MpsEnvGenCommand(services).parse(listOf("completion", "bash")) }
         assertTrue("complete" in e.message!!)
@@ -419,10 +461,27 @@ class CommandsTest {
     }
 
     @Test
+    fun `bash completes the version with options after the cursor`() {
+        val e = assertThrows<CliktError> { MpsEnvGenCommand(services).parse(listOf("completion", "bash")) }
+        val script = File(tmp, "completion.bash").apply { writeText(e.message!!) }
+        fun complete(vararg words: String, cursor: Int): String {
+            val call = "source '$script'; COMP_WORDS=(${words.joinToString(" ")}); COMP_CWORD=$cursor; _mps_env_gen; " +
+                "echo \"${'$'}{COMPREPLY[*]}\""
+            val process = ProcessBuilder("bash", "--norc", "--noprofile", "-c", call).redirectErrorStream(true)
+                .apply { environment().keys.removeAll(setOf("MPS_ENV_GEN_INSTALLS", "MPS_BASE_PATH")) }
+                .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null"))).start()
+            return process.inputStream.bufferedReader().readText().trim().also { process.waitFor() }
+        }
+        assertEquals("2026.1 2026.1.1", complete("mps-env-gen", "create", "2026", cursor = 2))
+        assertEquals("2026.1 2026.1.1", complete("mps-env-gen", "create", "2026", "--temp", "--start", cursor = 2))
+    }
+
+    @Test
     fun `packaged MPS versions are supported, ordered and parseable`() {
         val versions = PackagedMpsVersions.all.map(MpsVersion::parse)
         assertTrue(versions.size > 10, versions.toString())
         assertTrue(versions.all { it >= MpsVersion.FIRST_SUPPORTED }, versions.toString())
+        assertTrue(versions.none { it in JbrResolver.UNSUPPORTED }, "versions that cannot be prepared are not offered")
         assertEquals(versions.sorted(), versions)
     }
 

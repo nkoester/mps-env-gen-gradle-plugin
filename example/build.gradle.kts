@@ -12,21 +12,15 @@ repositories {
     mavenLocal()
 }
 
-val myMpsPath = Path(project.layout.buildDirectory.get().toString(), "mps")
+// MPS extensions, used by mps-project as the project library "dependencies" (build/dependencies)
 val myDependencyPath = Path(project.layout.buildDirectory.get().toString(), "dependencies")
 
-val mps: Configuration = configurations.create("mps")
 val mpsExtensions: Configuration = configurations.create("mpsExtensions")
 
 dependencies {
-    mps(libs.mps)
     mpsExtensions(libs.mps.extensions)
 }
 
-val extractMps = tasks.register<Copy>("extractMps") {
-    from({ mps.resolve().map { zipTree(it) } })
-    into(myMpsPath)
-}
 val extractMPS_extensions = tasks.register<Copy>("extractMPS_extensions") {
     from({ mpsExtensions.resolve().map { zipTree(it) } })
     into(myDependencyPath)
@@ -34,14 +28,9 @@ val extractMPS_extensions = tasks.register<Copy>("extractMPS_extensions") {
 
 val setup = tasks.register("setup") {
     group = "Setup"
-    description = "Download and extract MPS and the all MPS dependencies."
-    dependsOn(extractMps)
+    description = "Download and extract the MPS dependencies of mps-project."
     dependsOn(extractMPS_extensions)
 }
-
-
-
-
 
 mpsEnvironments {
     // defaults for all environments: MPS of the version in gradle/libs.versions.toml
@@ -64,7 +53,8 @@ mpsEnvironments {
             // mpsPath.set(file("/path/to/MPS-${libs.versions.mps.get()}"))
             // projectPath.set(file("/some/other/mps/project/path/"))
 
-            httpPort.set(9292)
+            // fixed node URL port; MPS does not start if it is in use (default: first free one from 63321 at each start)
+            httpPort.set(63400)
             theme.set(Theme.LIGHT)                 // default: LIGHT
             xms.set("2048m")                       // default: 1024m
             xmx.set("4096m")                       // default: 2048m
@@ -77,7 +67,6 @@ mpsEnvironments {
         }
 
         register("2-debug") {
-            httpPort.set(9293)
             debug.set(true)          // default: false
             debugPort.set(1234)      // default: 5071
             debugSuspend.set(true)   // wait for a debugger (default: false)

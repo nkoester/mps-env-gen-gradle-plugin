@@ -106,6 +106,9 @@ abstract class MpsEnvironment @Inject constructor(private val name: String) : Na
     /** MPS checks models before generation; default: false */
     abstract val modelCheckBeforeGeneration: Property<Boolean>
 
+    /** MPS checks for updates of itself and its plugins and notifies about them; default: true */
+    abstract val updateChecks: Property<Boolean>
+
     /** additional lines of the vmoptions file */
     abstract val vmOptions: ListProperty<String>
 

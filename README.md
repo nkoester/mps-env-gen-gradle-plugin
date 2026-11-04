@@ -109,6 +109,7 @@ mpsEnvironments {
             mpsPath.set(file("/vol/mps/MPS-2026.1-linux"))    // installed MPS instead of the default version
             httpPort.set(63400)                     // fixed node URL port, see "5.3 Node URL port"
             theme.set(Theme.DARK)
+            updateChecks.set(false)                 // no update checks for MPS and plugins; default: true
             os.set(listOf(OS.LINUX, OS.WINDOWS))    // start scripts to generate; default: current OS
             vmOptions.add("-Dmy.option=1")          // extra lines for mps64.vmoptions
             ideaProperties.add("my.property=1")     // extra lines for idea.properties
@@ -248,6 +249,9 @@ CLI:
 - `mps-env-gen init-defaults --print` lists every option of `create` with its help text and default
 - `mps-env-gen <command> --help` shows the options of each command
 - `copy` and `refresh` accept the environment settings too and change only what is given
+- every option has a short form (e.g. `-t` for `--temp`, `-s` for `--start`), listed by `--help`; flags combine, e.g. `create 2025.1.4 -ts`
+- options and arguments may come in any order
+- the optional values of `--start` and `--debug` must be attached: `--start=tmuxLA`, `-s=tmuxLA`, `--debug=5005`, `-x5005`
 
 Settings stored in files that MPS also edits (heap, theme, model check, VM options, IDEA properties, project) are written only if the file is missing, or when explicitly requested (`refresh` with the option or `--reset-settings`, Gradle `--overwrite-settings`), see "5.4 Changes to generated environments".
 

@@ -60,8 +60,9 @@ tasks.register("updateMpsVersions") {
         val pattern = Regex("""^(\d{4})\.(\d+)(?:\.(\d+))?(?:-(.+))?$""")
         val versions = Regex("<version>([^<]+)</version>").findAll(metadata).map { it.groupValues[1].trim() }
             .mapNotNull { v -> pattern.matchEntire(v)?.destructured?.let { (y, m, p, q) -> Triple(v, listOf(y.toInt(), m.toInt(), p.ifEmpty { "0" }.toInt()), q) } }
-            // supported range of the tool (MpsVersion.FIRST_SUPPORTED)
+            // supported range of the tool (MpsVersion.FIRST_SUPPORTED), without JbrResolver.UNSUPPORTED (checked by a test)
             .filter { (_, numbers) -> numbers[0] > 2022 || numbers[0] == 2022 && numbers[1] >= 2 }
+            .filter { (version) -> version !in setOf("2025.2.1") }
             .toList()
         val finals = versions.filter { it.third.isEmpty() }.map { it.second }.toSet()
         // pre-releases only until their release is published

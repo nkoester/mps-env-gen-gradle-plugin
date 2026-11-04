@@ -58,7 +58,7 @@ class MpsEnvGenCommand(services: CliServices = CliServices()) : CoreNoOpCliktCom
     """.trimIndent()
 
     init {
-        versionOption(CliVersion.value)
+        versionOption(CliVersion.value, names = setOf("-V", "--version"))
         subcommands(
             CreateCommand(services), CopyCommand(services), RenameCommand(services), RefreshCommand(services),
             InitDefaultsCommand(services),
@@ -74,7 +74,7 @@ class MpsEnvGenCommand(services: CliServices = CliServices()) : CoreNoOpCliktCom
 /** shared by all commands working on environments */
 abstract class EnvironmentCommand(name: String, protected val services: CliServices) : CoreCliktCommand(name) {
 
-    protected val target by option("--target", envvar = "MPS_ENV_GEN_TARGET",
+    protected val target by option("-T", "--target", envvar = "MPS_ENV_GEN_TARGET",
         help = "folder of the environments; bare environment names are looked up here")
         .file(canBeFile = false).default(File(".mpsconfig"))
     protected val output by OutputOptions()
@@ -178,8 +178,8 @@ class CreateCommand(services: CliServices) : EnvironmentCommand("create", servic
 
     private val mps by argument("mps", help = "MPS version, folder name in --installs, or path to an MPS installation",
         completionCandidates = INSTALLS_COMPLETION)
-    private val name by option("--name", help = "environment name (default: MPS version; with --temp plus date and time)")
-    private val temp by option("--temp", help = "throw-away environment below \$TMPDIR/mps-env-gen").flag()
+    private val name by option("-n", "--name", help = "environment name (default: MPS version; with --temp plus date and time)")
+    private val temp by option("-t", "--temp", help = "throw-away environment below \$TMPDIR/mps-env-gen").flag()
     private val source by MpsSourceOptions()
     private val settings by SettingsOptions()
     private val startOptions by StartOptions()
@@ -232,10 +232,10 @@ class CopyCommand(services: CliServices) : EnvironmentCommand("copy", services) 
 
     private val env by argument("env", help = "environment path or name")
     private val newName by argument("new-name")
-    private val into by option("--into", help = "folder for the copy (default: next to the source)").file(canBeFile = false)
-    private val mps by option("--mps", help = "use another MPS (version, folder name in --installs, or path) for the copy",
+    private val into by option("-l", "--into", help = "folder for the copy (default: next to the source)").file(canBeFile = false)
+    private val mps by option("-m", "--mps", help = "use another MPS (version, folder name in --installs, or path) for the copy",
         completionCandidates = INSTALLS_COMPLETION)
-    private val withCaches by option("--with-caches", help = "also copy caches and logs").flag()
+    private val withCaches by option("-w", "--with-caches", help = "also copy caches and logs").flag()
     private val source by MpsSourceOptions()
     private val settings by SettingsOptions()
     private val startOptions by StartOptions()
@@ -282,7 +282,7 @@ class RenameCommand(services: CliServices) : EnvironmentCommand("rename", servic
 
     private val env by argument("env", help = "environment path or name")
     private val newName by argument("new-name")
-    private val force by option("--force", help = "rename even if MPS seems to be running (stale lock files)").flag()
+    private val force by option("-f", "--force", help = "rename even if MPS seems to be running (stale lock files)").flag()
 
     override fun run() {
         val from = locate(env)
@@ -317,9 +317,9 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
     """.trimIndent()
 
     private val env by argument("env", help = "environment path or name")
-    private val mps by option("--mps", help = "switch to another MPS (version, folder name in --installs, or path)",
+    private val mps by option("-m", "--mps", help = "switch to another MPS (version, folder name in --installs, or path)",
         completionCandidates = INSTALLS_COMPLETION)
-    private val resetSettings by option("--reset-settings",
+    private val resetSettings by option("-R", "--reset-settings",
         help = "rewrite vmoptions, idea.properties and the MPS option files with the stored or given settings " +
             "(otherwise they are kept, as they may contain changes made in MPS; backup in .backup/)").flag()
     private val source by MpsSourceOptions()
@@ -385,8 +385,10 @@ internal fun isHeld(file: File): Boolean {
 private val INSTALLS_COMPLETION = CompletionCandidates.Custom { shell ->
     val versions = PackagedMpsVersions.all.joinToString(" ")
     when (shell) {
+        // Clikt calls this via 'compgen -F', which sets COMP_CWORD to -1 (the last word, wrong with words after the
+        // cursor); the word at the cursor is the caller's local 'word', visible through bash's dynamic scoping
         CompletionCandidates.Custom.ShellType.BASH -> """
-            local cur="${'$'}{COMP_WORDS[COMP_CWORD]}" dir="${'$'}{MPS_ENV_GEN_INSTALLS:-${'$'}{MPS_BASE_PATH:-}}" entry i version
+            local cur="${'$'}{word-${'$'}{COMP_WORDS[COMP_CWORD]}}" dir="${'$'}{MPS_ENV_GEN_INSTALLS:-${'$'}{MPS_BASE_PATH:-}}" entry i version
             # a whole version in a folder name, as LocalMpsLocator matches it
             local re='(^|[^0-9.])([0-9]{4}\.[0-9]+(\.[0-9]+)?(-(EAP|RC)[0-9]*)?)([^0-9.]|${'$'})'
             local -a names=()

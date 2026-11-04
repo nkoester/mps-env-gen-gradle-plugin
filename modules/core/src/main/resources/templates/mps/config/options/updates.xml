@@ -1,5 +1,6 @@
 <application>
     <component name="UpdatesConfigurable">
+REPLACE_ME__UPDATE_CHECKS
         <option name="SHOW_WHATS_NEW_EDITOR" value="false" />
     </component>
 </application>

@@ -41,15 +41,15 @@ object DistributionPreparer {
     /**
      * [target] if it already holds MPS [mpsVersion] with JBR [jbrVersion] for [platform], otherwise prepared from the
      * archives. Distributions may be shared (cache folder, several projects, CLI and Gradle), so preparation is
-     * serialised by a lock file next to [target] and an existing distribution, possibly in use, is never replaced
-     * when it matches.
+     * serialised by a hidden lock file next to [target] and an existing distribution, possibly in use, is never replaced
+     * when it matches. The lock file stays: deleting it would let a waiting and a new process lock different files.
      */
     fun prepareOrReuse(
         target: File, platform: Platform, mpsVersion: MpsVersion, jbrVersion: JbrVersion,
         mpsArchive: () -> File, jbrArchive: () -> File,
     ): PreparedDistribution {
         target.absoluteFile.parentFile.mkdirs()
-        RandomAccessFile(File(target.absoluteFile.parentFile, "${target.name}.lock"), "rw").use { lockFile ->
+        RandomAccessFile(File(target.absoluteFile.parentFile, ".${target.name}.lock"), "rw").use { lockFile ->
             lockFile.channel.lock().use {
                 read(target)?.takeIf { it.platform == platform && it.mpsVersion == mpsVersion && it.jbrVersion == jbrVersion }
                     ?.let { return it }

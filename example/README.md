@@ -1,20 +1,21 @@
 # Example Project using the `mps-env-gen-gradle-plugin`
 
-This project is a minimal working example showing the possible usage of the `mps-env-gen-gradle-plugin gradle plugin.
-To test this example, you have to setup the project and call the environment generator:
+This project shows the usage of the `mps-env-gen-gradle-plugin` Gradle plugin.
+`doAll` extracts the MPS extensions used by `mps-project` and generates all environments:
 
 ```shell
 $ ./gradlew doAll
-$ ./gradlew generateMpsEnvironmentAll
 ```
 
-After this, you can find three generated environments in $root/.mpsconfig:
+MPS itself is downloaded from Nexus in the version of `gradle/libs.versions.toml` and kept in `.mpsconfig` (`mpsInTargetPath`).
+After this, you find three generated environments in `.mpsconfig`:
 
 ```shell
 .mpsconfig
 ├── 0-default
 ├── 1-special
-└── 2-debug
+├── 2-debug
+└── mps-2022.2.4-LINUX
 ```
 
 Each of these environments holds startup scripts which you can simply run to directly open up MPS on the included MPS project.

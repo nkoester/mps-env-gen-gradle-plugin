@@ -1,11 +1,10 @@
 [versions]
-mpsEnvGen = "0.0.4-SNAPSHOT"
+mpsEnvGen = "0.1.0-SNAPSHOT"
 mps = "2022.2.4"
 mpsExtensions = "2022.2.2988.736f389"
 
 
 [libraries]
-mps = {group = "com.jetbrains", name="mps", version.ref="mps"}
 mps-extensions = {group = "de.itemis.mps", name="extensions", version.ref="mpsExtensions"}
 
 

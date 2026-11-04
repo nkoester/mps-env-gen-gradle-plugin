@@ -35,12 +35,13 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
             debugSuspend.convention(false)
             theme.convention(Theme.LIGHT)
             modelCheckBeforeGeneration.convention(false)
+            updateChecks.convention(true)
         }
 
         val distributions = DistributionTasks(project, extension)
         val generateAll = project.tasks.register("generateMpsEnvironmentAll") {
             group = "mps"
-            description = "Generates ALL isolated MPS configuration prefixes."
+            description = "Generates all isolated MPS environments."
         }
 
         extension.environments.all {
@@ -96,6 +97,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
             debugSuspend.set(environment.debugSuspend)
             theme.set(environment.theme)
             modelCheckBeforeGeneration.set(environment.modelCheckBeforeGeneration)
+            updateChecks.set(environment.updateChecks)
             vmOptions.set(environment.vmOptions)
             ideaProperties.set(environment.ideaProperties)
         }

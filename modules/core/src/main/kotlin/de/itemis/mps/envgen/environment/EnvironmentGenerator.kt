@@ -29,6 +29,8 @@ data class EnvironmentSpec(
     val projectPath: File? = null,
     /** MPS checks models before generation; slow, so off by default */
     val modelCheckBeforeGeneration: Boolean = false,
+    /** MPS checks for updates of itself and its plugins and notifies about them; on by default */
+    val updateChecks: Boolean = true,
     val theme: Theme = Theme.LIGHT,
     val xms: String = "1024m",
     val xmx: String = "2048m",
@@ -88,8 +90,10 @@ enum class EnvironmentPart {
     MODEL_CHECK,
     /** `ide.general.xml` */
     TIPS,
-    /** `updates.xml` (no "what's new"), `other.xml` (new UI onboarding seen) */
-    ONBOARDING;
+    /** `other.xml` (new UI onboarding and "what's new" seen) */
+    ONBOARDING,
+    /** `updates.xml` (no "what's new", update checks) */
+    UPDATES;
 
     companion object {
         val ALL: Set<EnvironmentPart> = entries.toSet()
@@ -98,7 +102,7 @@ enum class EnvironmentPart {
          * written only if missing; afterwards they belong to the user (MPS settings, hand edits) and are rewritten
          * only on explicit request
          */
-        val USER_OWNED: Set<EnvironmentPart> = setOf(VM_OPTIONS, IDEA_PROPERTIES, THEME, PROJECT, MODEL_CHECK, TIPS, ONBOARDING)
+        val USER_OWNED: Set<EnvironmentPart> = setOf(VM_OPTIONS, IDEA_PROPERTIES, THEME, PROJECT, MODEL_CHECK, TIPS, ONBOARDING, UPDATES)
     }
 }
 
@@ -213,6 +217,7 @@ class EnvironmentGenerator(
         EnvironmentPart.THEME -> spec.copy(theme = stored.theme)
         EnvironmentPart.PROJECT -> spec.copy(projectPath = stored.projectPath)
         EnvironmentPart.MODEL_CHECK -> spec.copy(modelCheckBeforeGeneration = stored.modelCheckBeforeGeneration)
+        EnvironmentPart.UPDATES -> spec.copy(updateChecks = stored.updateChecks)
         else -> spec
     }
 
@@ -226,6 +231,7 @@ class EnvironmentGenerator(
                 EnvironmentPart.THEME -> listOf("theme" to (spec.theme to stored.theme))
                 EnvironmentPart.PROJECT -> listOf("projectPath" to (spec.projectPath to stored.projectPath))
                 EnvironmentPart.MODEL_CHECK -> listOf("modelCheckBeforeGeneration" to (spec.modelCheckBeforeGeneration to stored.modelCheckBeforeGeneration))
+                EnvironmentPart.UPDATES -> listOf("updateChecks" to (spec.updateChecks to stored.updateChecks))
                 else -> emptyList()
             }
             pairs.filter { (_, values) -> values.first != values.second }.map { (name, values) -> "$name = ${values.first}" }
@@ -311,7 +317,10 @@ class EnvironmentGenerator(
 
         // no "what's new" page: older versions read updates.xml; 242+ compare whats.new.last.shown.version with the
         // page's year-release-eap-hash, so a stored year 9999 is always newer. On 242+ the new UI onboarding counts as seen
-        files.write(EnvironmentPart.ONBOARDING, File(options, "updates.xml")) { readTemplate("$templates/updates.xml") }
+        files.write(EnvironmentPart.UPDATES, File(options, "updates.xml")) {
+            val checks = if (spec.updateChecks) "" else UPDATE_CHECKS_OFF
+            readTemplate("$templates/updates.xml").replace("REPLACE_ME__UPDATE_CHECKS\n", checks)
+        }
         if (newUi) files.write(EnvironmentPart.ONBOARDING, File(options, "other.xml")) {
             readTemplate("$templates/other.xml").replace("MPS_BUILD", build!!.number)
         }
@@ -428,6 +437,10 @@ class EnvironmentGenerator(
 
     companion object {
         const val CREATED_FILE = "created.txt"
+
+        /** no update checks for MPS and its plugins; both options exist from MPS 2022.2 to 2026.1 at least */
+        private const val UPDATE_CHECKS_OFF =
+            "        <option name=\"CHECK_NEEDED\" value=\"false\" />\n        <option name=\"PLUGINS_CHECK_NEEDED\" value=\"false\" />\n"
 
         private val START_SCRIPT = Regex("""startMPS_(LINUX|MAC|WINDOWS)_.+\.(sh|bat)""")
 

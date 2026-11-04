@@ -31,8 +31,8 @@ object JbrResolver {
         "2023.3" to "17.0.9-b1087.9",
     ).mapKeys { MpsVersion.parse(it.key) }.mapValues { JbrVersion.parse(it.value) }
 
-    /** no JBR of the required build line is published on Nexus */
-    internal val UNSUPPORTED = setOf(MpsVersion.parse("2025.2.1"))
+    /** no JBR of the required build line is published on Nexus; also left out of the CLI's completion list */
+    val UNSUPPORTED = setOf(MpsVersion.parse("2025.2.1"))
 
     /**
      * @param markerVersion `jbr_jcef` version from the marker POM, null if there is none for [mpsVersion]

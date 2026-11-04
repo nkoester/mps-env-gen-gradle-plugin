@@ -89,6 +89,9 @@ class UserOwnedFilesTest {
         generator().generate(spec)
         val options = options(spec)
         assertTrue("SHOW_WHATS_NEW_EDITOR\" value=\"false" in File(options, "updates.xml").readText())
+        // update checks stay on by default
+        assertFalse("CHECK_NEEDED" in File(options, "updates.xml").readText())
+        assertFalse("REPLACE_ME" in File(options, "updates.xml").readText())
         assertTrue("\"experimental.ui.used.version\": \"251.23774.423\"" in File(options, "other.xml").readText())
         assertTrue("\"whats.new.last.shown.version\": \"9999-9-0-mpsenvgen\"" in File(options, "other.xml").readText())
         assertTrue("ExperimentalLightWithLightHeader" in File(options, "laf.xml").readText())

@@ -26,8 +26,8 @@ class InitDefaultsCommand(private val services: CliServices) : CoreCliktCommand(
           mps-env-gen init-defaults --print | diff - ${services.defaultsFile()}
     """.trimIndent()
 
-    private val print by option("--print", help = "print the template instead of writing the defaults file").flag()
-    private val force by option("--force", help = "replace an existing defaults file; it is backed up next to it first").flag()
+    private val print by option("-p", "--print", help = "print the template instead of writing the defaults file").flag()
+    private val force by option("-f", "--force", help = "replace an existing defaults file; it is backed up next to it first").flag()
 
     override fun run() {
         val text = defaultsTemplate(services, currentContext)

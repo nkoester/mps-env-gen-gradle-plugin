@@ -129,11 +129,13 @@ class PrepareMpsFunctionalTest {
         buildFile("""    mpsVersion.set("2026.1")
                 environments.register("Default")""")
 
-        val first = runner("prepareMps-2026.1", "--configuration-cache").build()
+        // generating also runs prepareMps; any configuration cache problem fails the build
+        val first = runner("generateMpsEnvironment-Default", "--configuration-cache").build()
         assertTrue("Configuration cache entry stored" in first.output, first.output)
-        val second = runner("prepareMps-2026.1", "--configuration-cache").build()
+        val second = runner("generateMpsEnvironment-Default", "--configuration-cache").build()
         assertTrue("Configuration cache entry reused" in second.output, second.output)
         assertEquals(TaskOutcome.UP_TO_DATE, second.task(":prepareMps-2026.1")?.outcome)
+        assertTrue(File(projectDir, ".mpsconfig/Default").isDirectory)
     }
 
     @Test

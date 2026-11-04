@@ -52,6 +52,7 @@ object EnvironmentMetadata {
         set("project", spec.projectPath)
         set("os", spec.os.joinToString(","))
         set("modelCheckBeforeGeneration", spec.modelCheckBeforeGeneration)
+        set("updateChecks", spec.updateChecks)
         set("theme", spec.theme)
         set("xms", spec.xms)
         set("xmx", spec.xmx)
@@ -88,6 +89,7 @@ object EnvironmentMetadata {
             javaHome = get("javaHome")?.let(::File),
             projectPath = get("project")?.let(::File),
             modelCheckBeforeGeneration = get("modelCheckBeforeGeneration")?.toBoolean() ?: template.modelCheckBeforeGeneration,
+            updateChecks = get("updateChecks")?.toBoolean() ?: template.updateChecks,
             theme = get("theme")?.let { runCatching { Theme.valueOf(it) }.getOrNull() } ?: template.theme,
             xms = get("xms") ?: template.xms,
             xmx = get("xmx") ?: template.xmx,
