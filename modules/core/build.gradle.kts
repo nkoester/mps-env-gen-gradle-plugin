@@ -18,6 +18,8 @@ kotlin {
     compilerOptions {
         apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
         languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
+        // 2.0 is deliberate (see above); raising it requires Gradle 9.0+ for consumers
+        freeCompilerArgs.add("-Xsuppress-version-warnings")
     }
 }
 
