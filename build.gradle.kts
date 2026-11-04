@@ -42,6 +42,16 @@ fun PublishingExtension.configureRepositories(project: Project) {
             name = "release"
             url = uri(rootProject.layout.buildDirectory.dir("release/maven"))
         }
+        // GitHub Packages of the repository a workflow runs in;
+        // credentials: ORG_GRADLE_PROJECT_gitHubPackagesUsername/Password (checked only when publishing there)
+        val gitHubRepository = providers.environmentVariable("GITHUB_REPOSITORY")
+        if (gitHubRepository.isPresent) {
+            maven {
+                name = "gitHubPackages"
+                url = uri("https://maven.pkg.github.com/${gitHubRepository.get()}")
+                credentials(PasswordCredentials::class)
+            }
+        }
         if (publishToItemisCloud) {
             maven {
                 name = "itemisCloud"
