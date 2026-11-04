@@ -27,7 +27,6 @@ allprojects {
 
 
 // shared by all published modules (gradle-plugin, core)
-val publishToItemisCloud = gitBranch() == "main"
 allprojects {
     plugins.withId("maven-publish") {
         extensions.configure<PublishingExtension> { configureRepositories(project) }
@@ -52,15 +51,16 @@ fun PublishingExtension.configureRepositories(project: Project) {
                 credentials(PasswordCredentials::class)
             }
         }
-        if (publishToItemisCloud) {
+        // itemis Nexus, only with credentials (release workflow or ~/.gradle/gradle.properties); the CLI is not published
+        val itemisCloudUser = providers.gradleProperty("artifacts.itemis.cloud.user")
+        val itemisCloudPw = providers.gradleProperty("artifacts.itemis.cloud.pw")
+        if (itemisCloudUser.isPresent && itemisCloudPw.isPresent) {
             maven {
                 name = "itemisCloud"
                 url = uri("https://artifacts.itemis.cloud/repository/maven-mps-releases/")
-                if (project.hasProperty("artifacts.itemis.cloud.user") && project.hasProperty("artifacts.itemis.cloud.pw")) {
-                    credentials {
-                        username = project.findProperty("artifacts.itemis.cloud.user") as String?
-                        password = project.findProperty("artifacts.itemis.cloud.pw") as String?
-                    }
+                credentials {
+                    username = itemisCloudUser.get()
+                    password = itemisCloudPw.get()
                 }
             }
         }

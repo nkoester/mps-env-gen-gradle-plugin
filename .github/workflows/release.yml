@@ -15,6 +15,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # secrets are not available in step conditions
+      HAS_ITEMIS_CLOUD: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_USER != '' }}
 
     steps:
       - uses: actions/checkout@v5
@@ -47,6 +50,18 @@ jobs:
           ./gradlew -PciBuild=true --stacktrace
           :core:publishAllPublicationsToGitHubPackagesRepository
           :gradle-plugin:publishAllPublicationsToGitHubPackagesRepository
+
+      # Gradle plugin (with marker and core) only; skipped without the secrets, e.g. in forks
+      - name: Publish to itemis Nexus
+        if: env.HAS_ITEMIS_CLOUD == 'true'
+        env:
+          ITEMIS_CLOUD_USER: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_USER }}
+          ITEMIS_CLOUD_PW: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_PW }}
+        run: >-
+          ./gradlew -PciBuild=true --stacktrace
+          "-Partifacts.itemis.cloud.user=$ITEMIS_CLOUD_USER" "-Partifacts.itemis.cloud.pw=$ITEMIS_CLOUD_PW"
+          :core:publishAllPublicationsToItemisCloudRepository
+          :gradle-plugin:publishAllPublicationsToItemisCloudRepository
 
       - name: Create GitHub release
         env:
