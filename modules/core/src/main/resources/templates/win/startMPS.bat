@@ -34,6 +34,13 @@ PAUSE
 EXIT /B 1
 :mpsFound
 
+:: plugins installed by mps-env-gen (written at generation) and the others found in the plugins folder; MPS is not
+:: started if a plugin port is busy
+REPLACE_ME__PLUGIN_CHECKS
+SET "OTHER_PLUGINS="
+FOR /D %%D IN ("%CONFIG_MPS_PATH%\plugins\*") DO CALL :otherPlugin "%%~nxD"
+IF DEFINED OTHER_PLUGINS ECHO Other plugins in mps\plugins:%OTHER_PLUGINS%
+
 :: mps64.vmoptions belongs to the user; only the node URL port line is kept up to date (several MPS instances
 :: must not share it). The line is added if it was removed. MPS is not started without a free port.
 SET "VM_OPTIONS_FILE=%CONFIG_MPS_PATH%\mps64.vmoptions"
@@ -94,6 +101,13 @@ ECHO.
 ::----------------------------------------------------------------------
 
 start "REPLACE_ME__ENVIRONMENT_NAME" "%MPS_PATH%\%MPS_LAUNCHER%"
+EXIT /B 0
+
+:: adds %1 to OTHER_PLUGINS unless it is in MANAGED_PLUGIN_FOLDERS
+:otherPlugin
+CALL SET "OTHER_PLUGINS_CHECK=%%MANAGED_PLUGIN_FOLDERS: %~1 =%%"
+IF NOT "%OTHER_PLUGINS_CHECK%"=="%MANAGED_PLUGIN_FOLDERS%" EXIT /B 0
+SET "OTHER_PLUGINS=%OTHER_PLUGINS% %~1"
 EXIT /B 0
 
 :: sets variable %2 to the first port from %1 up to %1 + 20 nobody listens on

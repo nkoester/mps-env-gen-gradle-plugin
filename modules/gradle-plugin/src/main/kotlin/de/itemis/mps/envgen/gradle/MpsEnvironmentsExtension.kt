@@ -5,10 +5,17 @@ import de.itemis.mps.envgen.environment.Theme
 import org.gradle.api.Action
 import org.gradle.api.Named
 import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.ProjectLayout
+import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import java.io.File
 import javax.inject.Inject
 
 /**
@@ -51,13 +58,24 @@ abstract class MpsEnvironmentsExtension @Inject constructor(objects: ObjectFacto
      */
     abstract val mpsInTargetPath: Property<Boolean>
 
+    /**
+     * plugin declarations for all environments (`<name>=<zip or folder>`, `<name>.property.<key>=<value>`,
+     * `<name>.port.<key>=<port>`, `<name>.compatible=true`); relative paths resolve against the file's folder
+     */
+    abstract val pluginsFile: RegularFileProperty
+
+    /** plugins for all environments; replace those of [pluginsFile] with the same name */
+    val plugins: NamedDomainObjectContainer<MpsPlugin> = objects.domainObjectContainer(MpsPlugin::class.java)
+
+    fun plugins(action: Action<NamedDomainObjectContainer<MpsPlugin>>) = action.execute(plugins)
+
     val environments: NamedDomainObjectContainer<MpsEnvironment> = objects.domainObjectContainer(MpsEnvironment::class.java)
 
     fun environments(action: Action<NamedDomainObjectContainer<MpsEnvironment>>) = action.execute(environments)
 }
 
 /** one environment; unset values fall back to the defaults of [MpsEnvironmentsExtension] */
-abstract class MpsEnvironment @Inject constructor(private val name: String) : Named {
+abstract class MpsEnvironment @Inject constructor(private val name: String, objects: ObjectFactory) : Named {
 
     override fun getName(): String = name
 
@@ -114,4 +132,56 @@ abstract class MpsEnvironment @Inject constructor(private val name: String) : Na
 
     /** additional lines of idea.properties */
     abstract val ideaProperties: ListProperty<String>
+
+    /** plugin declarations of this environment, in addition to the defaults; same format as the default's */
+    abstract val pluginsFile: RegularFileProperty
+
+    /** plugins of this environment; replace default ones and those of the plugin files with the same name */
+    val plugins: NamedDomainObjectContainer<MpsPlugin> = objects.domainObjectContainer(MpsPlugin::class.java)
+
+    fun plugins(action: Action<NamedDomainObjectContainer<MpsPlugin>>) = action.execute(plugins)
+}
+
+/**
+ * a plugin zip or folder to install into the environment's plugins folder:
+ * ```
+ * plugins {
+ *     register("my-tool") {
+ *         from("tools/my-tool-1.0.zip")
+ *         ports.put("my.tool.port", 8600)
+ *     }
+ * }
+ * ```
+ * Names: letters, digits, '_' and '-'.
+ */
+abstract class MpsPlugin @Inject constructor(private val name: String, private val layout: ProjectLayout) : Named {
+
+    override fun getName(): String = name
+
+    /** zip or folder with one or more plugins */
+    abstract val source: Property<File>
+
+    /** system properties for mps64.vmoptions */
+    abstract val systemProperties: MapProperty<String, String>
+
+    /** system properties holding a fixed port; the start scripts refuse to start MPS if one is in use */
+    abstract val ports: MapProperty<String, Int>
+
+    /** install without warning if the compatibility with the MPS build is uncertain; default: false */
+    abstract val compatible: Property<Boolean>
+
+    /** [path]: file, directory, provider of one, or a path relative to the project directory */
+    fun from(path: Any) {
+        if (path is Provider<*>) source.set(path.map { resolve(it) }) else source.set(resolve(path))
+    }
+
+    private fun resolve(value: Any?): File {
+        val file = when (value) {
+            is RegularFile -> value.asFile
+            is Directory -> value.asFile
+            is File -> value
+            else -> File(value.toString())
+        }
+        return if (file.isAbsolute) file else layout.projectDirectory.file(file.path).asFile
+    }
 }

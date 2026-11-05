@@ -141,6 +141,12 @@ mpsEnvironments {
             os.set(listOf(OS.LINUX, OS.WINDOWS))    // start scripts to generate; default: current OS
             vmOptions.add("-Dmy.option=1")          // extra lines for mps64.vmoptions
             ideaProperties.add("my.property=1")     // extra lines for idea.properties
+            plugins {                               // plugin zips or folders, see "5.5 Plugins"
+                register("my-tool") {
+                    from("tools/my-tool-1.0-2026.1.zip")
+                    ports.put("my.tool.port", 8600)
+                }
+            }
         }
     }
 }
@@ -245,6 +251,12 @@ Environment 'review-my-project' created
 
 Start it with (copied to the clipboard):
   /tmp/sample-folder/.mpsconfig/review-my-project/startMPS_LINUX_review-my-project.sh
+```
+
+Create a throw-away environment with a plugin installed (see "5.5 Plugins"):
+
+```bash
+$ mps-env-gen create 2025.1.4 --temp --plugin ~/plugins/my-tool-1.0-2025.1.zip --start
 ```
 
 ## 2.3 Bash completion
@@ -376,7 +388,7 @@ Node URL port: 63321 (first free from 63321)  http://127.0.0.1:63321/node
 Files with MPS settings or meant for editing are written **only if missing**.
 Neither Gradle nor `mps-env-gen` overwrites them unless told to:
 
-- `mps/mps64.vmoptions`, of which the start script updates only the node URL port line
+- `mps/mps64.vmoptions`, of which the start script updates only the node URL port line and generation only the plugin block (see "5.5 Plugins")
 - `mps/idea.properties`, of which only the five `idea.*.path` keys follow the location
 - `mps/config/options/`: `laf.xml`, `colors.scheme.xml`, `ui.lnf.xml`, `ide.general.xml`, `other.xml`, `updates.xml`, `generationSettings.xml`, `recentProjects.xml`, `trusted-paths.xml`
 - `mps/config/early-access-registry.txt`
@@ -394,6 +406,54 @@ To apply it to an existing one:
 
 Replaced files are kept in `<env>/.backup/<timestamp>/`.
 "Help > Edit Custom VM Options" in MPS edits `mps/mps64.vmoptions`, except in debug starts.
+
+## 5.5 Plugins
+Plugin zips or folders are installed into the environment's own plugin folder `mps/plugins`, next to plugins installed from within MPS.
+Language libraries of a project (e.g. MPS-extensions resolved by Gradle into `.mps/libraries.xml`) do not belong here.
+
+Declare plugins in a file, which can be checked in and is shared by Gradle and the CLI:
+
+```properties
+# mps-plugins.properties: <name>=<zip or folder>; relative paths from this file's folder, ~/ is the home folder
+my-tool=../tools/my-tool-1.0-2025.1.zip
+# system property for mps64.vmoptions
+my-tool.property.my.tool.mode=fast
+# system property holding a fixed port: the start script does not start MPS if it is in use
+my-tool.port.my.tool.port=8600
+# no question or warning if the compatibility with the MPS build is uncertain
+my-tool.compatible=true
+```
+
+- Gradle: `pluginsFile.set(file("mps-plugins.properties"))` for all environments or per environment, and `plugins { register("<name>") { from(...) } }` (see "1.1.2 Expert Variant").
+  Later declarations replace earlier ones of the same name: defaults file, defaults `plugins`, environment file, environment `plugins`.
+- CLI (`create`, `copy`, `refresh`): `--plugins-file FILE`, `--plugin [NAME=]PATH`, `--plugin-property NAME:KEY=VALUE`, `--plugin-port NAME:KEY=PORT`, `--plugin-compatible NAME`, `--reinstall-plugins`.
+  `copy` and `refresh` also accept `--remove-plugin NAME` and `--no-plugins`, and `refresh` refuses to change plugins while MPS runs.
+  `plugins-file=` in the defaults file applies to every `create`.
+
+Compatibility is checked against the MPS build before anything is written:
+
+| `plugin.xml` | Result |
+|---|---|
+| `since-build` later than the MPS build, or `until-build` earlier | error, point to the build of the plugin for this MPS version |
+| no `until-build` and built for another MPS series (e.g. `since-build="251"` on MPS 2026.1), or no readable `plugin.xml` | uncertain: the CLI asks `Install anyway? [y/N]` (without a terminal: error, use `--plugin-compatible`), Gradle installs with a warning |
+
+Installation:
+- Unchanged plugins are kept; replaced zips, changed folders and missing plugin folders are installed again.
+- Plugins no longer declared are removed. Folders of plugins installed otherwise are never touched; a declared plugin does not replace one unless `--reinstall-plugins` is given.
+- The plugin properties are written into a block at the end of `mps/mps64.vmoptions`, rewritten on every generation, also when the file is kept. They win over the same `-D` in `vmOptions`.
+- Warnings: dependencies that are neither bundled with MPS nor installed, plugins replacing a bundled one, plugins with MPS languages while the project declares libraries.
+- `environment.properties` records the plugins, so `refresh`, `copy` and `rename` need no plugin options.
+
+On every start the start script lists the plugins and checks them:
+
+```
+Plugins (managed by mps-env-gen):
+  my-tool  ../tools/my-tool-1.0-2025.1.zip  (com.example.tool, my.tool.port=8600)
+WARNING: plugin 'my-tool': folder plugins/my-tool is missing; restore: mps-env-gen refresh /path/to/env
+Other plugins in mps/plugins: installed-from-mps
+```
+
+It warns about missing plugin folders, plugins disabled in MPS (`config/disabled_plugins.txt`) and the warnings of the installation, and does not start MPS if a plugin port is in use.
 
 ## 5.6 vmoptions defaults
 `mps/mps64.vmoptions` combines the MPS defaults with those of the earlier bash tool mps-zookeeper.

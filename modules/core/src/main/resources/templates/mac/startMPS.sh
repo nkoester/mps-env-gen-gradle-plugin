@@ -114,6 +114,20 @@ updateNodeUrlPort() {
     printf "Node URL port: %s (%s)  http://127.0.0.1:%s/node\n" "${port}" "${origin}" "${port}"
 }
 
+# plugins installed by mps-env-gen (written at generation) and the others found in the plugins folder; exits if a
+# plugin port is busy
+checkPlugins() {
+REPLACE_ME__PLUGIN_CHECKS
+    others=""
+    for dir in "${CONFIG_MPS_PATH}/plugins"/*/; do
+        [ -d "${dir}" ] || continue
+        name="$(basename "${dir}")"
+        case "${MANAGED_PLUGIN_FOLDERS}" in *" ${name} "*) ;; *) others="${others} ${name}" ;; esac
+    done
+    if [ -n "${others}" ]; then printf "Other plugins in mps/plugins:%s\n" "${others}"; fi
+    return 0
+}
+
 # debugging is decided here (configured or -d); only then MPS starts from a copy with the jdwp line on a free port,
 # otherwise directly from mps64.vmoptions, so "Edit Custom VM Options" in MPS edits that file
 selectVmOptions() {
@@ -147,6 +161,7 @@ selectVmOptions() {
 
 testPaths "$@"
 testMps
+checkPlugins
 updateNodeUrlPort
 selectVmOptions
 

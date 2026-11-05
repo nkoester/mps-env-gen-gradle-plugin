@@ -15,12 +15,23 @@ class CliServices(
     val getenv: (String) -> String? = System::getenv,
     /** parent of throw-away environments */
     val tempDir: () -> File = { File(System.getenv("TMPDIR") ?: System.getProperty("java.io.tmpdir"), "mps-env-gen") },
+    /** asks a yes/no question on the terminal; null without one (pipes, CI) */
+    val confirm: (question: String) -> Boolean? = ::confirmOnTerminal,
     /** defaults for `create` options, e.g. `xmx=4096m` */
     val defaultsFile: () -> File = {
         System.getenv("MPS_ENV_GEN_CONFIG")?.let(::File)
             ?: File(System.getenv("XDG_CONFIG_HOME") ?: "${System.getProperty("user.home")}/.config", "mps-env-gen/defaults.properties")
     },
 )
+
+private fun confirmOnTerminal(question: String): Boolean? {
+    val console = System.console() ?: return null
+    // Java 22+ returns a console also without a terminal and tells it via isTerminal(); not in the Java 11 API
+    val terminal = runCatching { console.javaClass.getMethod("isTerminal").invoke(console) as Boolean }.getOrDefault(true)
+    if (!terminal) return null
+    val answer = console.readLine("%s", question) ?: return false
+    return answer.trim().lowercase() in setOf("y", "yes")
+}
 
 private fun runStartScript(script: File, args: List<String>): Int {
     val command = if (OS.current == OS.WINDOWS) listOf("cmd", "/c", script.path) else listOf(script.path)

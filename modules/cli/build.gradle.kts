@@ -165,11 +165,13 @@ val bashCompletion = tasks.register<JavaExec>("bashCompletion") {
 fun Task.linkInstalledTool(home: Provider<File>, executable: String) {
     val prefix = installPrefix
     val tool = "mps-env-gen"
+    // local copy: referencing the script-level val from doLast captures the script, which the configuration cache rejects
+    val windows = isWindows
     val completion = bashCompletion.flatMap { it.outputs.files.elements }.map { it.single().asFile }
     doLast {
         val target = home.get().toPath().resolve(executable)
         val bin = prefix.get().toPath().resolve("bin").also { Files.createDirectories(it) }
-        if (isWindows) {
+        if (windows) {
             // symlinks need admin rights or developer mode on Windows
             bin.resolve("$tool.bat").toFile().writeText("@\"$target\" %*\r\n")
         } else {

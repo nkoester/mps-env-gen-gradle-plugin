@@ -19,6 +19,9 @@ import de.itemis.mps.envgen.environment.EnvironmentPart
 import de.itemis.mps.envgen.environment.EnvironmentSpec
 import de.itemis.mps.envgen.environment.Ports
 import de.itemis.mps.envgen.environment.Theme
+import de.itemis.mps.envgen.plugins.PluginDeclaration
+import de.itemis.mps.envgen.plugins.PluginFile
+import de.itemis.mps.envgen.plugins.PluginInstallationException
 import java.io.File
 
 /** where MPS comes from if `<mps>` is a version */
@@ -105,6 +108,85 @@ class SettingsOptions : OptionGroup("Environment settings") {
     companion object {
         /** `--debug` without port, `--http-port auto` */
         const val AUTO_PORT = -1
+    }
+}
+
+/** plugins to install into the environment; see [applyTo] for the order */
+class PluginOptions : OptionGroup("Plugins") {
+    val pluginsFiles by option("--plugins-file", metavar = "FILE",
+        help = "plugin declarations: <name>=<zip or folder>, <name>.property.<key>=<value>, <name>.port.<key>=<port>, " +
+            "<name>.compatible=true; repeatable")
+        .file(canBeDir = false).multiple()
+    val plugins by option("--plugin", metavar = "[NAME=]PATH", help = "plugin zip or folder; NAME defaults to the file name; repeatable")
+        .multiple()
+    val properties by option("--plugin-property", metavar = "NAME:KEY=VALUE", help = "system property for a plugin; repeatable")
+        .multiple()
+    val ports by option("--plugin-port", metavar = "NAME:KEY=PORT",
+        help = "system property holding a fixed port; MPS does not start if it is in use; repeatable")
+        .multiple()
+    val compatible by option("--plugin-compatible", metavar = "NAME",
+        help = "install the plugin without asking if its compatibility with the MPS build is uncertain; repeatable")
+        .multiple()
+    val reinstall by option("--reinstall-plugins", help = "install all plugins again, also over folders not installed by mps-env-gen")
+        .flag()
+
+    /**
+     * [stored] (empty on create, minus [removed], all with [clear]), then the plugin files in order, then --plugin;
+     * a later declaration replaces an earlier one of the same name. Properties, ports and compatibility apply last.
+     */
+    fun applyTo(stored: List<PluginDeclaration>, removed: List<String> = emptyList(), clear: Boolean = false): List<PluginDeclaration> {
+        val unknown = removed.filter { name -> stored.none { it.name == name } }
+        if (unknown.isNotEmpty()) throw UsageError("No plugin ${unknown.joinToString()} in this environment")
+        val base = if (clear) emptyList() else stored.filter { it.name !in removed }
+        val files = try {
+            pluginsFiles.map { PluginFile.read(it) }
+        } catch (e: PluginInstallationException) {
+            throw UsageError(e.message ?: "Invalid plugin file")
+        }
+        var result = PluginFile.merge(base, *files.toTypedArray(), plugins.map(::declaration))
+
+        fun named(option: String, value: String): Pair<String, String> {
+            val name = value.substringBefore(':', "")
+            if (name.isEmpty() || result.none { it.name == name }) {
+                throw UsageError("$option $value: no plugin '$name'; declared: ${result.joinToString { it.name }.ifEmpty { "none" }}")
+            }
+            return name to value.substringAfter(':')
+        }
+        fun update(name: String, change: (PluginDeclaration) -> PluginDeclaration) {
+            result = result.map { if (it.name == name) change(it) else it }
+        }
+        properties.forEach { value ->
+            val (name, setting) = named("--plugin-property", value)
+            if ('=' !in setting) throw UsageError("--plugin-property $value: expected NAME:KEY=VALUE")
+            update(name) { it.copy(systemProperties = it.systemProperties + (setting.substringBefore('=') to setting.substringAfter('='))) }
+        }
+        ports.forEach { value ->
+            val (name, setting) = named("--plugin-port", value)
+            val port = setting.substringAfter('=', "").toIntOrNull()?.takeIf { it in 1..65535 }
+                ?: throw UsageError("--plugin-port $value: expected NAME:KEY=PORT")
+            update(name) { it.copy(ports = it.ports + (setting.substringBefore('=') to port)) }
+        }
+        compatible.forEach { name ->
+            named("--plugin-compatible", "$name:")
+            update(name) { it.copy(compatible = true) }
+        }
+        return result
+    }
+
+    private fun declaration(value: String): PluginDeclaration {
+        val prefix = value.substringBefore('=', "")
+        val explicit = prefix.isNotEmpty() && PluginDeclaration.NAME.matches(prefix)
+        val source = if (explicit) value.substringAfter('=') else value
+        if (source.isEmpty()) throw UsageError("--plugin $value: no zip or folder given")
+        val path = PluginFile.resolve(source, File("").absoluteFile)
+        val name = if (explicit) prefix else defaultName(path)
+        return PluginDeclaration(name, path.path, path)
+    }
+
+    companion object {
+        /** file name without `.zip`, other characters than letters, digits, '_' and '-' replaced */
+        fun defaultName(path: File): String =
+            path.name.removeSuffix(".zip").replace(Regex("[^A-Za-z0-9_-]+"), "-").trim('-').ifEmpty { "plugin" }
     }
 }
 

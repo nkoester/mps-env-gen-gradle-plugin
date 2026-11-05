@@ -136,6 +136,9 @@ class CommandsTest {
     private val clipboard = mutableListOf<String>()
     private val starts = mutableListOf<Pair<File, List<String>>>()
     private var startExitCode = 0
+    /** answer to yes/no questions; null: no terminal */
+    private var confirmAnswer: Boolean? = null
+    private val questions = mutableListOf<String>()
     private val output = StringBuilder()
     private val target get() = File(tmp, ".mpsconfig")
 
@@ -158,7 +161,15 @@ class CommandsTest {
             getenv = { null },
             tempDir = { File(tmp, "temp") },
             defaultsFile = { File(tmp, "defaults.properties") },
+            confirm = { questions += it; confirmAnswer },
         )
+
+    /** plugin folder with a descriptor for builds from [since]; FakeNexus 2026.1 is build 261.1.1 */
+    private fun plugin(folder: String, id: String = "com.example.$folder", since: String = "261") =
+        File(tmp, "plugins/$folder").apply {
+            File(this, "META-INF").mkdirs()
+            File(this, "META-INF/plugin.xml").writeText("<idea-plugin><id>$id</id><idea-version since-build=\"$since\"/></idea-plugin>")
+        }
 
     private fun run(vararg args: String) {
         val command = MpsEnvGenCommand(services)
@@ -483,6 +494,82 @@ class CommandsTest {
         assertTrue(versions.all { it >= MpsVersion.FIRST_SUPPORTED }, versions.toString())
         assertTrue(versions.none { it in JbrResolver.UNSUPPORTED }, "versions that cannot be prepared are not offered")
         assertEquals(versions.sorted(), versions)
+    }
+
+    @Test
+    fun `create installs plugins from options and plugin files, refresh changes and restores them`() {
+        val tool = plugin("my-tool")
+        File(tmp, "conf/mps-plugins.properties").apply { parentFile.mkdirs() }
+            .writeText("other=../plugins/other\nother.property.a.b=1\n")
+        plugin("other")
+
+        run("create", "2026.1", "--plugin", tool.path, "--plugin-port", "my-tool:server.port=8600",
+            "--plugins-file", File(tmp, "conf/mps-plugins.properties").path)
+        val plugins = File(env("2026.1"), "mps/plugins")
+        assertTrue(File(plugins, "my-tool/META-INF/plugin.xml").isFile)
+        assertTrue(File(plugins, "other/META-INF/plugin.xml").isFile)
+        assertEquals("other,my-tool", props(env("2026.1")).getProperty("plugins"))
+        val vmoptions = File(env("2026.1"), "mps/mps64.vmoptions").readLines()
+        assertTrue("-Da.b=1" in vmoptions && "-Dserver.port=8600" in vmoptions, vmoptions.toString())
+        val script = script("2026.1").readText()
+        assertTrue("mps-env-gen refresh ${env("2026.1")}" in script)
+
+        File(plugins, "my-tool").deleteRecursively()
+        File(plugins, "from-ide/lib.jar").apply { parentFile.mkdirs() }.writeText("jar")
+        run("refresh", "2026.1", "--remove-plugin", "other")
+        assertTrue(File(plugins, "my-tool").isDirectory, "restored")
+        assertFalse(File(plugins, "other").exists())
+        assertTrue(File(plugins, "from-ide").isDirectory)
+        assertFalse("-Da.b=1" in File(env("2026.1"), "mps/mps64.vmoptions").readLines())
+
+        run("copy", "2026.1", "work")
+        assertTrue(File(env("work"), "mps/plugins/my-tool").isDirectory)
+        assertEquals("my-tool", props(env("work")).getProperty("plugins"))
+
+        run("refresh", "work", "--no-plugins")
+        assertFalse(File(env("work"), "mps/plugins/my-tool").exists())
+        assertTrue(File(env("work"), "mps/plugins/from-ide").isDirectory)
+        assertThrows<CliktError> { run("refresh", "work", "--remove-plugin", "unknown") }
+    }
+
+    @Test
+    fun `plugins of uncertain compatibility are asked for, incompatible ones refused`() {
+        val older = plugin("older", since = "251")
+        val e = assertThrows<CliktError> { run("create", "2026.1", "--plugin", older.path) }
+        assertTrue("--plugin-compatible" in e.message!!, e.message)
+        assertFalse(env("2026.1").exists(), "nothing written")
+
+        confirmAnswer = false
+        assertThrows<CliktError> { run("create", "2026.1", "--plugin", older.path) }
+        assertTrue(questions.last().contains("built for 251 (2025.1)") && questions.last().endsWith("Install anyway? [y/N] "), questions.toString())
+
+        confirmAnswer = true
+        run("create", "2026.1", "--plugin", older.path)
+        assertTrue(File(env("2026.1"), "mps/plugins/older").isDirectory)
+        assertEquals("261.1.1", props(env("2026.1")).getProperty("plugin.older.confirmedFor"))
+
+        confirmAnswer = null
+        run("create", "2026.1", "--name", "declared", "--plugin", older.path, "--plugin-compatible", "older")
+        assertTrue(File(env("declared"), "mps/plugins/older").isDirectory)
+
+        val newer = plugin("newer", since = "271")
+        val incompatible = assertThrows<CliktError> { run("create", "2026.1", "--name", "x", "--plugin", newer.path, "--plugin-compatible", "newer") }
+        assertTrue("requires build 271 or later" in incompatible.message!!, incompatible.message)
+    }
+
+    @Test
+    fun `plugin options are validated and offered in the defaults template as plugins file only`() {
+        val tool = plugin("my-tool")
+        assertThrows<CliktError> { run("create", "2026.1", "--plugin", tool.path, "--plugin-property", "unknown:a=1") }
+        assertThrows<CliktError> { run("create", "2026.1", "--plugin", tool.path, "--plugin-port", "my-tool:p=x") }
+        assertThrows<CliktError> { run("create", "2026.1", "--plugins-file", File(tmp, "missing.properties").path) }
+        assertFalse(env("2026.1").exists())
+        assertEquals("my-tool-1_0-2025_1".replace('_', '-'), PluginOptions.defaultName(File("my-tool-1.0-2025.1.zip")))
+
+        run("init-defaults", "--print")
+        assertTrue("#plugins-file=" in output, output.toString())
+        listOf("#plugin=", "#plugin-property=", "#plugin-port=", "#plugin-compatible=", "#reinstall-plugins=")
+            .forEach { assertFalse(it in output, it) }
     }
 
     @Test

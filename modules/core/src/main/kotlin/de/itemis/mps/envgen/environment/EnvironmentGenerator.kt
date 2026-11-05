@@ -5,6 +5,11 @@ import de.itemis.mps.envgen.OS
 import de.itemis.mps.envgen.distribution.Arch
 import de.itemis.mps.envgen.distribution.DistributionLayout
 import de.itemis.mps.envgen.distribution.Platform
+import de.itemis.mps.envgen.plugins.InstalledPlugin
+import de.itemis.mps.envgen.plugins.PluginDeclaration
+import de.itemis.mps.envgen.plugins.PluginInstaller
+import de.itemis.mps.envgen.plugins.PluginScripts
+import de.itemis.mps.envgen.plugins.PluginVmOptions
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -54,6 +59,10 @@ data class EnvironmentSpec(
     /** MPS version or path as given by the user */
     val mpsSource: String = mpsPath.toString(),
     val jbrVersion: String? = null,
+    /** plugins installed into the plugins folder of the environment */
+    val plugins: List<PluginDeclaration> = emptyList(),
+    /** printed by the start scripts if a managed plugin folder is missing: how to regenerate the environment */
+    val pluginRestoreHint: String = "regenerate the environment",
 ) {
     val environmentDir: File get() = File(targetPath, environmentName)
     val mpsConfigDir: File get() = File(environmentDir, "mps")
@@ -93,7 +102,9 @@ enum class EnvironmentPart {
     /** `other.xml` (new UI onboarding and "what's new" seen) */
     ONBOARDING,
     /** `updates.xml` (no "what's new", update checks) */
-    UPDATES;
+    UPDATES,
+    /** declared plugins in `mps/plugins`; folders of plugins installed otherwise are not touched */
+    PLUGINS;
 
     companion object {
         val ALL: Set<EnvironmentPart> = entries.toSet()
@@ -114,6 +125,8 @@ class EnvironmentGenerator(
     private val warn: (String) -> Unit = lifecycle,
     /** how to overwrite user owned files with this tool, used in hints */
     private val overwriteHint: String = "overwrite them explicitly",
+    /** asked for plugins of uncertain compatibility; true installs them anyway */
+    private val acceptUncertainPlugin: (message: String) -> Boolean = { false },
 ) {
 
     /**
@@ -122,12 +135,17 @@ class EnvironmentGenerator(
      * @param parts files to consider
      * @param overwrite user owned parts to rewrite although they exist; previous files go to `.backup/<timestamp>`
      * @param history event recorded in the metadata, e.g. `copied from ...`
+     * @param installedPlugins plugins present in the plugins folder; default: as recorded in the metadata
+     * @param reinstallPlugins install all declared plugins again, also over folders not installed by this tool
+     * @throws de.itemis.mps.envgen.plugins.PluginInstallationException before anything is written
      */
     fun generate(
         spec: EnvironmentSpec,
         parts: Set<EnvironmentPart> = EnvironmentPart.ALL,
         overwrite: Set<EnvironmentPart> = emptySet(),
         history: String? = null,
+        installedPlugins: List<InstalledPlugin>? = null,
+        reinstallPlugins: Boolean = false,
     ) {
         val date = currentDate()
         lifecycle("Running env generator version ${spec.generatorVersion}")
@@ -136,14 +154,18 @@ class EnvironmentGenerator(
         info("Writing MPS config files to ${spec.mpsConfigDir}")
         info("OS: ${spec.os}")
 
-        val stored = EnvironmentMetadata.read(spec.environmentDir, spec)?.spec
+        val storedEnvironment = EnvironmentMetadata.read(spec.environmentDir, spec)
+        val stored = storedEnvironment?.spec
+        val build = MpsBuild.of(spec.mpsPath)
+        val previousPlugins = installedPlugins ?: storedEnvironment?.plugins.orEmpty()
+        val pluginPlan = if (EnvironmentPart.PLUGINS in parts) preparePlugins(spec, build, previousPlugins, reinstallPlugins) else null
+
         spec.environmentDir.mkdirs()
         spec.mpsConfigDir.mkdirs()
         ignoreInGit(spec.targetPath)
         writeCreationTimestamp(spec)
 
         val files = UserFiles(spec, parts, overwrite)
-        val build = MpsBuild.of(spec.mpsPath)
         info("MPS build: ${build ?: "unknown"}, new UI: ${build?.newUi ?: false}")
 
         if (EnvironmentPart.README in parts) {
@@ -159,12 +181,42 @@ class EnvironmentGenerator(
         files.write(EnvironmentPart.VM_OPTIONS, File(spec.mpsConfigDir, Constants.MPS_VMOPTIONS_FILENAME)) { vmOptions(spec, date) }
         writeIdeaProperties(spec, date, files)
         writeOptions(spec, build, files)
-        if (EnvironmentPart.START_SCRIPTS in parts) writeStartScripts(spec, date)
+        // the scripts show the plugins as they will be after apply
+        if (EnvironmentPart.START_SCRIPTS in parts) writeStartScripts(spec, date, pluginPlan?.installed ?: previousPlugins)
+        val plugins = pluginPlan?.apply() ?: previousPlugins
+        if (EnvironmentPart.PLUGINS in parts) writePluginVmOptions(spec)
 
         files.backupDir?.let { lifecycle("Previous files: $it") }
         val effective = stored?.let { files.kept.fold(spec) { s, part -> keepStored(s, it, part) } } ?: spec
         stored?.let { hintKeptSettings(spec, it, files.kept) }
-        if (EnvironmentPart.METADATA in parts) EnvironmentMetadata.write(effective, history)
+        if (EnvironmentPart.METADATA in parts) EnvironmentMetadata.write(effective, history, plugins)
+    }
+
+    /** checks and extracts the declared plugins; a failure leaves no new environment folder behind */
+    private fun preparePlugins(spec: EnvironmentSpec, build: MpsBuild?, installed: List<InstalledPlugin>, reinstall: Boolean): PluginInstaller.Plan? {
+        if (spec.plugins.isEmpty() && installed.isEmpty()) return null
+        PluginVmOptions.check(spec.plugins)
+        val existed = spec.environmentDir.exists()
+        val installer = PluginInstaller(
+            pluginsDir = File(spec.mpsConfigDir, "plugins"), mpsHome = spec.mpsPath, build = build,
+            projectPath = spec.projectPath, acceptUncertain = acceptUncertainPlugin, warn = warn, info = info,
+        )
+        return try {
+            installer.prepare(spec.plugins, installed, reinstall)
+        } catch (e: Exception) {
+            if (!existed) spec.environmentDir.deleteRecursively()
+            throw e
+        }
+    }
+
+    /** the plugin block of `mps64.vmoptions` is rewritten even if the file is kept */
+    private fun writePluginVmOptions(spec: EnvironmentSpec) {
+        val file = File(spec.mpsConfigDir, Constants.MPS_VMOPTIONS_FILENAME).takeIf { it.isFile } ?: return
+        PluginVmOptions.update(file, spec.plugins)
+        val overridden = PluginVmOptions.overridden(spec.plugins, file.readLines().takeWhile { it != PluginVmOptions.BEGIN })
+        if (overridden.isNotEmpty()) {
+            warn("Plugin properties override ${overridden.joinToString()} in $file")
+        }
     }
 
     /** only rewrites the start scripts of an existing environment, keeping its configuration */
@@ -362,7 +414,7 @@ class EnvironmentGenerator(
         }
     }
 
-    private fun writeStartScripts(spec: EnvironmentSpec, date: String) {
+    private fun writeStartScripts(spec: EnvironmentSpec, date: String, plugins: List<InstalledPlugin>) {
         // scripts of a former name (moved/renamed environment) or OS no longer generated
         val current = spec.os.filter { it != OS.OTHER }.map { startScriptName(it, spec.environmentName) }.toSet()
         spec.environmentDir.listFiles().orEmpty()
@@ -392,7 +444,14 @@ class EnvironmentGenerator(
             script.writeText(
                 fillTemplate(
                     readTemplate(template.templatePath),
-                    comments = mapOf("GENERATION_DATE" to date, "VERSION" to spec.generatorVersion),
+                    comments = mapOf(
+                        "GENERATION_DATE" to date, "VERSION" to spec.generatorVersion,
+                        // generated code, escaped by PluginScripts
+                        "PLUGIN_CHECKS" to when (os) {
+                            OS.WINDOWS -> PluginScripts.batch(plugins, spec.pluginRestoreHint)
+                            else -> PluginScripts.shell(plugins, spec.pluginRestoreHint).prependIndent("    ")
+                        }.trimEnd(),
+                    ),
                     values = mapOf(
                         "CONFIG_PATH" to spec.environmentDir.toString(),
                         "CONFIG_MPS_PATH" to spec.mpsConfigDir.toString(),

@@ -53,7 +53,11 @@ class InitDefaultsCommand(private val services: CliServices) : CoreCliktCommand(
 }
 
 /** options of `create` that describe a single invocation, not a default */
-private val PER_INVOCATION_KEYS = setOf("help", "name", "temp", "start", "start-debug")
+private val PER_INVOCATION_KEYS = setOf(
+    "help", "name", "temp", "start", "start-debug",
+    // plugins come from plugins-file; single plugins, their settings and reinstalling are per call
+    "plugin", "plugin-property", "plugin-port", "plugin-compatible", "reinstall-plugins",
+)
 
 /** all options of `create`, commented out, grouped like in the help; built from the options so it cannot drift */
 internal fun defaultsTemplate(services: CliServices, context: Context): String {

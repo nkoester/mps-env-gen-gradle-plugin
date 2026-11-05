@@ -15,6 +15,7 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.groups.provideDelegate
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.file
@@ -29,6 +30,8 @@ import de.itemis.mps.envgen.environment.EnvironmentSpec
 import de.itemis.mps.envgen.environment.MpsOrigin
 import de.itemis.mps.envgen.environment.Ports
 import de.itemis.mps.envgen.environment.StoredEnvironment
+import de.itemis.mps.envgen.plugins.InstalledPlugin
+import de.itemis.mps.envgen.plugins.PluginInstallationException
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -87,10 +90,38 @@ abstract class EnvironmentCommand(name: String, protected val services: CliServi
     }
     protected fun warn(message: String) = echo("Warning: $message", err = true)
 
+    /** set if a plugin of uncertain compatibility could not be asked about */
+    private var uncertainPluginRefused = false
+
     protected fun generator() = EnvironmentGenerator(
         lifecycle = ::verbose, info = ::verbose, error = { echo(it, err = true) }, warn = ::warn,
         overwriteHint = "use 'mps-env-gen refresh <env> --reset-settings' or the setting's option on refresh",
+        acceptUncertainPlugin = { message ->
+            services.confirm("$message\nInstall anyway? [y/N] ") ?: false.also { uncertainPluginRefused = true }
+        },
     )
+
+    /** generates via [generator]; plugin problems are reported like other failures, without a stack trace */
+    protected fun generate(
+        spec: EnvironmentSpec,
+        history: String,
+        overwrite: Set<EnvironmentPart> = emptySet(),
+        installedPlugins: List<InstalledPlugin>? = null,
+        reinstallPlugins: Boolean = false,
+    ) {
+        try {
+            generator().generate(spec, overwrite = overwrite, history = history, installedPlugins = installedPlugins, reinstallPlugins = reinstallPlugins)
+        } catch (e: PluginInstallationException) {
+            val hint = if (uncertainPluginRefused) " Without a terminal to ask, use --plugin-compatible <name> to install it anyway." else ""
+            throw failure("${e.message}$hint")
+        }
+    }
+
+    /** plugins cannot be replaced while MPS runs from the environment */
+    protected fun checkNotRunning(dir: File, what: String) {
+        val locks = listOf("mps/config", "mps/system").flatMap { d -> LOCK_FILES.map { File(dir, "$d/$it") } }.filter(::isHeld)
+        if (locks.isNotEmpty()) throw failure("MPS is running from $dir (${locks.joinToString()} locked); close it to $what")
+    }
 
     /** `<env>`: path to an environment (or its start script); a bare name is looked up in --target */
     protected fun locate(env: String): File {
@@ -122,6 +153,7 @@ abstract class EnvironmentCommand(name: String, protected val services: CliServi
             MpsOrigin.NEXUS -> "Prepare it again via: mps-env-gen refresh ${spec.environmentDir}"
             else -> "Point the environment to another MPS via: mps-env-gen refresh ${spec.environmentDir} --mps <version|path>"
         },
+        pluginRestoreHint = "mps-env-gen refresh ${spec.environmentDir}",
         generatorVersion = CliVersion.value,
     )
 
@@ -182,6 +214,7 @@ class CreateCommand(services: CliServices) : EnvironmentCommand("create", servic
     private val temp by option("-t", "--temp", help = "throw-away environment below \$TMPDIR/mps-env-gen").flag()
     private val source by MpsSourceOptions()
     private val settings by SettingsOptions()
+    private val pluginOptions by PluginOptions()
     private val startOptions by StartOptions()
 
     init {
@@ -199,16 +232,17 @@ class CreateCommand(services: CliServices) : EnvironmentCommand("create", servic
         val baseName = name ?: File(mps).takeIf { it.exists() }?.absoluteFile?.normalize()?.name ?: mps
         val envName = if (temp && name == null) "$baseName-${LocalDateTime.now().format(TIMESTAMP)}" else baseName
         val dir = checkNewName(parent, envName)
+        val plugins = pluginOptions.applyTo(emptyList())
         val resolved = MpsResolver(source, services, ::info, ::verbose, ::warn).resolve(mps, parent)
 
         val defaults = EnvironmentSpec(
             targetPath = parent, environmentName = envName, os = listOf(OS.current),
             mpsPath = resolved.home, javaHome = resolved.javaHome,
             mpsOrigin = resolved.origin, mpsSource = resolved.source, jbrVersion = resolved.jbrVersion,
-            debugPort = Ports.DEBUG_BASE, missingMpsHint = "", generatorVersion = CliVersion.value,
+            debugPort = Ports.DEBUG_BASE, missingMpsHint = "", generatorVersion = CliVersion.value, plugins = plugins,
         )
         val (spec, _) = settings.applyTo(defaults, Ports.usedBySiblings(parent), reallocatePorts = true)
-        generator().generate(withHints(spec), history = "created")
+        generate(withHints(spec), history = "created", reinstallPlugins = pluginOptions.reinstall)
         printStart(withHints(spec).also { check(it.environmentDir == dir) }, "created")
         startIfRequested(spec, startArgs)
     }
@@ -238,6 +272,9 @@ class CopyCommand(services: CliServices) : EnvironmentCommand("copy", services) 
     private val withCaches by option("-w", "--with-caches", help = "also copy caches and logs").flag()
     private val source by MpsSourceOptions()
     private val settings by SettingsOptions()
+    private val pluginOptions by PluginOptions()
+    private val removePlugins by option("--remove-plugin", metavar = "NAME", help = "do not take this plugin along; repeatable").multiple()
+    private val noPlugins by option("--no-plugins", help = "take none of the plugins installed by mps-env-gen along").flag()
     private val startOptions by StartOptions()
 
     override fun run() {
@@ -248,7 +285,8 @@ class CopyCommand(services: CliServices) : EnvironmentCommand("copy", services) 
         val parent = (into ?: from.parentFile).absoluteFile.normalize()
         val dir = checkNewName(parent, newName)
 
-        var spec = stored.spec.copy(targetPath = parent, environmentName = newName)
+        val plugins = pluginOptions.applyTo(stored.spec.plugins, removePlugins, noPlugins)
+        var spec = stored.spec.copy(targetPath = parent, environmentName = newName, plugins = plugins)
         mps?.let { spec = spec.withMps(MpsResolver(source, services, ::info, ::verbose, ::warn).resolve(it, parent)) }
 
         val folders = listOf("mps/config", "mps/plugins") + if (withCaches) listOf("mps/system", "mps/log", "mps/scratch") else emptyList()
@@ -264,7 +302,9 @@ class CopyCommand(services: CliServices) : EnvironmentCommand("copy", services) 
 
         // the source keeps its ports, so the copy gets new ones unless given
         val (applied, parts) = settings.applyTo(spec, Ports.usedBySiblings(parent), reallocatePorts = true)
-        generator().generate(withHints(applied), overwrite = parts, history = "copied from $from")
+        // the copied plugin folders are the source's managed ones
+        generate(withHints(applied), history = "copied from $from", overwrite = parts, installedPlugins = stored.plugins,
+            reinstallPlugins = pluginOptions.reinstall)
         printStart(withHints(applied), "copied")
         startIfRequested(applied, startArgs)
     }
@@ -295,7 +335,7 @@ class RenameCommand(services: CliServices) : EnvironmentCommand("rename", servic
         Files.move(from.toPath(), dir.toPath())
 
         val spec = withHints(stored.spec.copy(environmentName = newName))
-        generator().generate(spec, history = "renamed from ${from.name}")
+        generate(spec, history = "renamed from ${from.name}")
         printStart(spec, "renamed")
     }
 }
@@ -324,6 +364,9 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
             "(otherwise they are kept, as they may contain changes made in MPS; backup in .backup/)").flag()
     private val source by MpsSourceOptions()
     private val settings by SettingsOptions()
+    private val pluginOptions by PluginOptions()
+    private val removePlugins by option("--remove-plugin", metavar = "NAME", help = "remove a plugin installed by mps-env-gen; repeatable").multiple()
+    private val noPlugins by option("--no-plugins", help = "remove all plugins installed by mps-env-gen").flag()
     private val startOptions by StartOptions()
 
     override fun run() {
@@ -331,8 +374,10 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
         val startArgs = startOptions.scriptArguments()
         val dir = locate(env)
         val stored = read(dir)
+        val plugins = pluginOptions.applyTo(stored.spec.plugins, removePlugins, noPlugins)
+        if (plugins != stored.spec.plugins || pluginOptions.reinstall) checkNotRunning(dir, "change its plugins")
         // the location wins over what is stored: the environment may have been moved
-        var spec = stored.spec.copy(targetPath = dir.parentFile, environmentName = dir.name)
+        var spec = stored.spec.copy(targetPath = dir.parentFile, environmentName = dir.name, plugins = plugins)
         // an MPS prepared in the target folder (--mps-in-target) stays there, also after moving the environment
         val mpsWasInTarget = stored.spec.mpsPath.absoluteFile.normalize().startsWith(stored.spec.targetPath.absoluteFile.normalize())
         val resolver = MpsResolver(source, services, ::info, ::verbose, ::warn)
@@ -350,7 +395,7 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
 
         val (applied, parts) = settings.applyTo(spec, Ports.usedBySiblings(spec.targetPath, exclude = dir), reallocatePorts = false)
         val overwrite = if (resetSettings) EnvironmentPart.USER_OWNED else parts
-        generator().generate(withHints(applied), overwrite = overwrite, history = "refreshed")
+        generate(withHints(applied), history = "refreshed", overwrite = overwrite, reinstallPlugins = pluginOptions.reinstall)
         printStart(withHints(applied), "refreshed")
         startIfRequested(applied, startArgs)
     }

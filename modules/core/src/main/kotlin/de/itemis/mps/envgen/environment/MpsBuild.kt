@@ -11,10 +11,16 @@ data class MpsBuild(val number: String) {
     /** the new UI is the default from platform 242 on (IntelliJ 2024.2; MPS 2024.3) */
     val newUi: Boolean get() = baseline >= NEW_UI_BASELINE
 
+    /** release series, e.g. 2025.1 for baseline 251 */
+    val series: String get() = seriesOf(baseline)
+
     override fun toString() = "MPS-$number"
 
     companion object {
         const val NEW_UI_BASELINE = 242
+
+        /** baseline `YYN` -> series `20YY.N`, e.g. 261 -> 2026.1 */
+        fun seriesOf(baseline: Int): String = "${2000 + baseline / 10}.${baseline % 10}"
 
         /** null if the installation has no readable `build.txt` */
         fun of(mpsHome: File): MpsBuild? =

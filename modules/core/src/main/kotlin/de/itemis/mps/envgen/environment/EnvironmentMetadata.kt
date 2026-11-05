@@ -2,6 +2,8 @@ package de.itemis.mps.envgen.environment
 
 import de.itemis.mps.envgen.Constants
 import de.itemis.mps.envgen.OS
+import de.itemis.mps.envgen.plugins.InstalledPlugin
+import de.itemis.mps.envgen.plugins.PluginDeclaration
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -14,6 +16,8 @@ data class StoredEnvironment(
     val created: String?,
     val refreshed: String?,
     val history: List<String>,
+    /** plugins installed by this tool; their declarations are in [spec] */
+    val plugins: List<InstalledPlugin> = emptyList(),
 )
 
 /**
@@ -32,7 +36,8 @@ object EnvironmentMetadata {
     fun isEnvironment(dir: File): Boolean =
         file(dir).isFile || File(dir, "mps/${Constants.IDEA_PROPERTIES_FILENAME}").isFile
 
-    fun write(spec: EnvironmentSpec, historyEntry: String? = null) {
+    /** @param plugins installed plugins; default: as stored before */
+    fun write(spec: EnvironmentSpec, historyEntry: String? = null, plugins: List<InstalledPlugin>? = null) {
         val previous = read(spec.environmentDir, spec)
         val now = LocalDateTime.now().format(TIMESTAMP)
         val history = previous?.history.orEmpty() + listOfNotNull(historyEntry?.let { "$now $it" })
@@ -64,6 +69,7 @@ object EnvironmentMetadata {
         setList("vmOption", spec.vmOptions)
         setList("ideaProperty", spec.ideaProperties)
         setList("history", history)
+        writePlugins(props, plugins ?: previous?.plugins.orEmpty())
 
         spec.environmentDir.mkdirs()
         file(spec.environmentDir).outputStream().use { props.store(it, "written by mps-env-gen; used by 'mps-env-gen refresh/copy/rename'") }
@@ -105,6 +111,54 @@ object EnvironmentMetadata {
             mpsSource = get("mps.source") ?: template.mpsSource,
             jbrVersion = get("jbr.version"),
         )
-        return StoredEnvironment(spec, get("created"), get("refreshed"), list("history"))
+        val plugins = readPlugins(props, file.parentFile)
+        return StoredEnvironment(spec.copy(plugins = plugins.map { it.declaration }), get("created"), get("refreshed"), list("history"), plugins)
+    }
+
+    /** `plugins=<names>`, then `plugin.<name>.<key>`; names contain no dots */
+    private fun writePlugins(props: Properties, plugins: List<InstalledPlugin>) {
+        if (plugins.isEmpty()) return
+        props.setProperty("plugins", plugins.joinToString(",") { it.declaration.name })
+        plugins.forEach { plugin ->
+            val d = plugin.declaration
+            fun set(key: String, value: Any?) = value?.let { props.setProperty("plugin.${d.name}.$key", it.toString()) }
+            set("source", d.source)
+            set("path", d.path)
+            set("fingerprint", plugin.fingerprint)
+            set("folders", plugin.folders.joinToString(","))
+            set("ids", plugin.ids.joinToString(","))
+            set("compatible", d.compatible.takeIf { it })
+            set("confirmedFor", plugin.confirmedFor)
+            d.systemProperties.forEach { (key, value) -> set("property.$key", value) }
+            d.ports.forEach { (key, value) -> set("port.$key", value) }
+            plugin.warnings.forEachIndexed { i, warning -> set("warning.$i", warning) }
+        }
+    }
+
+    private fun readPlugins(props: Properties, environmentDir: File): List<InstalledPlugin> {
+        val names = props.getProperty("plugins")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        return names.mapNotNull { name ->
+            val prefix = "plugin.$name."
+            fun get(key: String): String? = props.getProperty(prefix + key)?.takeIf { it.isNotEmpty() }
+            fun map(group: String): Map<String, String> = props.stringPropertyNames().filter { it.startsWith("$prefix$group.") }
+                .sorted().associate { it.removePrefix("$prefix$group.") to props.getProperty(it) }
+            fun split(key: String): List<String> = get(key)?.split(",").orEmpty()
+            val source = get("source") ?: return@mapNotNull null
+            InstalledPlugin(
+                declaration = PluginDeclaration(
+                    name = name,
+                    source = source,
+                    path = get("path")?.let(::File) ?: File(environmentDir, source),
+                    systemProperties = map("property"),
+                    ports = map("port").mapNotNull { (k, v) -> v.toIntOrNull()?.let { k to it } }.toMap(),
+                    compatible = get("compatible")?.toBoolean() ?: false,
+                ),
+                fingerprint = get("fingerprint") ?: "",
+                folders = split("folders"),
+                ids = split("ids"),
+                confirmedFor = get("confirmedFor"),
+                warnings = generateSequence(0) { it + 1 }.map { get("warning.$it") }.takeWhile { it != null }.filterNotNull().toList(),
+            )
+        }
     }
 }

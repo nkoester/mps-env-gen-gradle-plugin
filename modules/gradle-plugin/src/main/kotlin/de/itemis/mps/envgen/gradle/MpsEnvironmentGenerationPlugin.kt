@@ -3,11 +3,16 @@ package de.itemis.mps.envgen.gradle
 import de.itemis.mps.envgen.OS
 import de.itemis.mps.envgen.distribution.Platform
 import de.itemis.mps.envgen.environment.Theme
+import de.itemis.mps.envgen.plugins.PluginDeclaration
+import de.itemis.mps.envgen.plugins.PluginFile
+import de.itemis.mps.envgen.plugins.PluginInstallationException
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.file.Directory
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 
@@ -100,6 +105,37 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
             updateChecks.set(environment.updateChecks)
             vmOptions.set(environment.vmOptions)
             ideaProperties.set(environment.ideaProperties)
+            plugins.set(project.provider {
+                PluginFile.merge(
+                    readPluginsFile(project, extension.pluginsFile), declarations(extension.plugins),
+                    readPluginsFile(project, environment.pluginsFile), declarations(environment.plugins),
+                )
+            })
+        }
+    }
+
+    /** read via the providers API, so the configuration cache notices changes of the file */
+    private fun readPluginsFile(project: Project, file: RegularFileProperty): List<PluginDeclaration> {
+        val location = file.orNull?.asFile ?: return emptyList()
+        if (!location.isFile) throw GradleException("Plugin file $location not found")
+        val text = project.providers.fileContents(file).asText.get()
+        return try {
+            PluginFile.parse(text, location.absoluteFile.parentFile, location.path)
+        } catch (e: PluginInstallationException) {
+            throw GradleException(e.message ?: "Invalid plugin file $location", e)
+        }
+    }
+
+    private fun declarations(plugins: NamedDomainObjectContainer<MpsPlugin>): List<PluginDeclaration> = plugins.map { plugin ->
+        val source = plugin.source.orNull ?: throw GradleException("Plugin '${plugin.name}': set its zip or folder with from(...)")
+        try {
+            PluginDeclaration(
+                name = plugin.name, source = source.path, path = source.absoluteFile.normalize(),
+                systemProperties = plugin.systemProperties.get(), ports = plugin.ports.get(),
+                compatible = plugin.compatible.getOrElse(false),
+            )
+        } catch (e: IllegalArgumentException) {
+            throw GradleException(e.message ?: "Invalid plugin '${plugin.name}'", e)
         }
     }
 
