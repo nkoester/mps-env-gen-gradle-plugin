@@ -353,6 +353,22 @@ class CommandsTest {
     }
 
     @Test
+    fun `merge driver popup can be switched on and off again`() {
+        run("create", "2026.1")
+        val notifications = File(env("2026.1"), "mps/config/options/notifications.xml")
+        assertTrue("displayType=\"NONE\"" in notifications.readText(), notifications.readText())
+        assertEquals("false", props(env("2026.1")).getProperty("mergeDriverNotification"))
+
+        run("refresh", "2026.1", "--merge-driver-notification")
+        assertTrue("displayType=\"BALLOON\"" in notifications.readText(), notifications.readText())
+        assertEquals("true", props(env("2026.1")).getProperty("mergeDriverNotification"))
+
+        run("refresh", "2026.1", "--no-merge-driver-notification")
+        assertTrue("displayType=\"NONE\"" in notifications.readText(), notifications.readText())
+        assertEquals("false", props(env("2026.1")).getProperty("mergeDriverNotification"))
+    }
+
+    @Test
     fun `http port is fixed only on request`() {
         run("create", "2026.1")
         assertNull(props(env("2026.1")).getProperty("httpPort"))

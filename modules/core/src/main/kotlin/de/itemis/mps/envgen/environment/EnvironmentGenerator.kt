@@ -36,6 +36,8 @@ data class EnvironmentSpec(
     val modelCheckBeforeGeneration: Boolean = false,
     /** MPS checks for updates of itself and its plugins and notifies about them; on by default */
     val updateChecks: Boolean = true,
+    /** MPS shows the VCS Addons popup about the merge driver; off by default, the message still goes to the notification log */
+    val mergeDriverNotification: Boolean = false,
     val theme: Theme = Theme.LIGHT,
     val xms: String = "1024m",
     val xmx: String = "2048m",
@@ -103,6 +105,8 @@ enum class EnvironmentPart {
     ONBOARDING,
     /** `updates.xml` (no "what's new", update checks) */
     UPDATES,
+    /** `notifications.xml` (VCS Addons merge driver popup) */
+    NOTIFICATIONS,
     /** declared plugins in `mps/plugins`; folders of plugins installed otherwise are not touched */
     PLUGINS;
 
@@ -113,7 +117,7 @@ enum class EnvironmentPart {
          * written only if missing; afterwards they belong to the user (MPS settings, hand edits) and are rewritten
          * only on explicit request
          */
-        val USER_OWNED: Set<EnvironmentPart> = setOf(VM_OPTIONS, IDEA_PROPERTIES, THEME, PROJECT, MODEL_CHECK, TIPS, ONBOARDING, UPDATES)
+        val USER_OWNED: Set<EnvironmentPart> = setOf(VM_OPTIONS, IDEA_PROPERTIES, THEME, PROJECT, MODEL_CHECK, TIPS, ONBOARDING, UPDATES, NOTIFICATIONS)
     }
 }
 
@@ -270,6 +274,7 @@ class EnvironmentGenerator(
         EnvironmentPart.PROJECT -> spec.copy(projectPath = stored.projectPath)
         EnvironmentPart.MODEL_CHECK -> spec.copy(modelCheckBeforeGeneration = stored.modelCheckBeforeGeneration)
         EnvironmentPart.UPDATES -> spec.copy(updateChecks = stored.updateChecks)
+        EnvironmentPart.NOTIFICATIONS -> spec.copy(mergeDriverNotification = stored.mergeDriverNotification)
         else -> spec
     }
 
@@ -284,6 +289,8 @@ class EnvironmentGenerator(
                 EnvironmentPart.PROJECT -> listOf("projectPath" to (spec.projectPath to stored.projectPath))
                 EnvironmentPart.MODEL_CHECK -> listOf("modelCheckBeforeGeneration" to (spec.modelCheckBeforeGeneration to stored.modelCheckBeforeGeneration))
                 EnvironmentPart.UPDATES -> listOf("updateChecks" to (spec.updateChecks to stored.updateChecks))
+                EnvironmentPart.NOTIFICATIONS ->
+                    listOf("mergeDriverNotification" to (spec.mergeDriverNotification to stored.mergeDriverNotification))
                 else -> emptyList()
             }
             pairs.filter { (_, values) -> values.first != values.second }.map { (name, values) -> "$name = ${values.first}" }
@@ -366,6 +373,12 @@ class EnvironmentGenerator(
 
         // disable tips on startup
         files.write(EnvironmentPart.TIPS, File(options, "ide.general.xml")) { readTemplate("$templates/ide.general.xml") }
+
+        // no popup asking to install the MPS merge driver (group "MergeDriver" of VCS Addons); still logged
+        files.write(EnvironmentPart.NOTIFICATIONS, File(options, "notifications.xml")) {
+            val template = readTemplate("$templates/notifications.xml")
+            if (spec.mergeDriverNotification) template.replace("displayType=\"NONE\"", "displayType=\"BALLOON\"") else template
+        }
 
         // no "what's new" page: older versions read updates.xml; 242+ compare whats.new.last.shown.version with the
         // page's year-release-eap-hash, so a stored year 9999 is always newer. On 242+ the new UI onboarding counts as seen

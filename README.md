@@ -138,6 +138,7 @@ mpsEnvironments {
             httpPort.set(63400)                     // fixed node URL port, see "5.3 Node URL port"
             theme.set(Theme.DARK)
             updateChecks.set(false)                 // no update checks for MPS and plugins; default: true
+            mergeDriverNotification.set(true)       // VCS Addons merge driver popup; default: false (still logged)
             os.set(listOf(OS.LINUX, OS.WINDOWS))    // start scripts to generate; default: current OS
             vmOptions.add("-Dmy.option=1")          // extra lines for mps64.vmoptions
             ideaProperties.add("my.property=1")     // extra lines for idea.properties
@@ -293,7 +294,7 @@ CLI:
 - options and arguments may come in any order
 - the optional values of `--start` and `--debug` must be attached: `--start=tmuxLA`, `-s=tmuxLA`, `--debug=5005`, `-x5005`
 
-Settings stored in files that MPS also edits (heap, theme, model check, VM options, IDEA properties, project) are written only if the file is missing, or when explicitly requested (`refresh` with the option or `--reset-settings`, Gradle `--overwrite-settings`), see "5.4 Changes to generated environments".
+Settings stored in files that MPS also edits (heap, theme, model check, update checks, merge driver popup, VM options, IDEA properties, project) are written only if the file is missing, or when explicitly requested (`refresh` with the option or `--reset-settings`, Gradle `--overwrite-settings`), see "5.4 Changes to generated environments".
 
 ## 3.1 CLI defaults file and environment variables
 
@@ -390,7 +391,7 @@ Neither Gradle nor `mps-env-gen` overwrites them unless told to:
 
 - `mps/mps64.vmoptions`, of which the start script updates only the node URL port line and generation only the plugin block (see "5.5 Plugins")
 - `mps/idea.properties`, of which only the five `idea.*.path` keys follow the location
-- `mps/config/options/`: `laf.xml`, `colors.scheme.xml`, `ui.lnf.xml`, `ide.general.xml`, `other.xml`, `updates.xml`, `generationSettings.xml`, `recentProjects.xml`, `trusted-paths.xml`
+- `mps/config/options/`: `laf.xml`, `colors.scheme.xml`, `ui.lnf.xml`, `ide.general.xml`, `other.xml`, `updates.xml`, `notifications.xml`, `generationSettings.xml`, `recentProjects.xml`, `trusted-paths.xml`
 - `mps/config/early-access-registry.txt`
 
 Always written:

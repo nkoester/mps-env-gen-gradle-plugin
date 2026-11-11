@@ -68,6 +68,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     @get:Input abstract val theme: Property<Theme>
     @get:Input abstract val modelCheckBeforeGeneration: Property<Boolean>
     @get:Input abstract val updateChecks: Property<Boolean>
+    @get:Input abstract val mergeDriverNotification: Property<Boolean>
     @get:Input abstract val vmOptions: ListProperty<String>
     @get:Input abstract val ideaProperties: ListProperty<String>
 
@@ -127,6 +128,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 projectPath = projectPath.get().asFile,
                 modelCheckBeforeGeneration = modelCheckBeforeGeneration.get(),
                 updateChecks = updateChecks.get(),
+                mergeDriverNotification = mergeDriverNotification.get(),
                 theme = theme.get(),
                 xms = xms.get(),
                 xmx = xmx.get(),

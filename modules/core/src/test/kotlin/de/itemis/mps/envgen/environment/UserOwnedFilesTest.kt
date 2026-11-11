@@ -67,6 +67,25 @@ class UserOwnedFilesTest {
     }
 
     @Test
+    fun `merge driver popup is off by default and can be switched on`() {
+        listOf("241.18034.1", "251.23774.423").forEach { build ->
+            val spec = spec(build).copy(environmentName = "env-$build")
+            generator().generate(spec)
+            val notifications = File(options(spec), "notifications.xml")
+            assertTrue("groupId=\"MergeDriver\" displayType=\"NONE\" shouldLog=\"true\"" in notifications.readText(), notifications.readText())
+
+            generator().generate(spec.copy(mergeDriverNotification = true))
+            assertTrue("displayType=\"NONE\"" in notifications.readText(), "kept without overwrite")
+            assertTrue("mergeDriverNotification = true" in warnings.removeLast(), "unapplied setting is reported")
+
+            generator().generate(spec.copy(mergeDriverNotification = true), overwrite = setOf(EnvironmentPart.NOTIFICATIONS))
+            assertTrue("groupId=\"MergeDriver\" displayType=\"BALLOON\"" in notifications.readText(), notifications.readText())
+            assertTrue(EnvironmentMetadata.read(spec.environmentDir, spec)!!.spec.mergeDriverNotification)
+        }
+        assertTrue(warnings.isEmpty(), warnings.toString())
+    }
+
+    @Test
     fun `idea properties keep user lines but follow the location`() {
         val spec = spec()
         generator().generate(spec)

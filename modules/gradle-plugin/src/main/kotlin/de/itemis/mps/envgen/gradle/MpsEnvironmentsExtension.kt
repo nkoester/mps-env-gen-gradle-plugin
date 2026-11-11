@@ -127,6 +127,9 @@ abstract class MpsEnvironment @Inject constructor(private val name: String, obje
     /** MPS checks for updates of itself and its plugins and notifies about them; default: true */
     abstract val updateChecks: Property<Boolean>
 
+    /** MPS shows the VCS Addons popup about the merge driver; default: false, the message is still logged */
+    abstract val mergeDriverNotification: Property<Boolean>
+
     /** additional lines of the vmoptions file */
     abstract val vmOptions: ListProperty<String>
 

@@ -73,6 +73,9 @@ class SettingsOptions : OptionGroup("Environment settings") {
     val updateChecks by option("-u", "--update-checks", help = "MPS checks for updates of itself and its plugins",
         helpTags = mapOf(HelpFormatter.Tags.DEFAULT to "true"))
         .nullableFlag("--no-update-checks")
+    val mergeDriverNotification by option("-N", "--merge-driver-notification",
+        help = "MPS shows the VCS Addons popup about the merge driver (disabled by default, the message is still logged)")
+        .nullableFlag("--no-merge-driver-notification")
 
     /**
      * applies the given settings to [spec]; ports marked [AUTO_PORT] are allocated against [usedPorts].
@@ -87,6 +90,7 @@ class SettingsOptions : OptionGroup("Environment settings") {
         theme?.let { result = result.copy(theme = it); parts += EnvironmentPart.THEME }
         modelCheck?.let { result = result.copy(modelCheckBeforeGeneration = it); parts += EnvironmentPart.MODEL_CHECK }
         updateChecks?.let { result = result.copy(updateChecks = it); parts += EnvironmentPart.UPDATES }
+        mergeDriverNotification?.let { result = result.copy(mergeDriverNotification = it); parts += EnvironmentPart.NOTIFICATIONS }
         xms?.let { result = result.copy(xms = it); parts += EnvironmentPart.VM_OPTIONS }
         xmx?.let { result = result.copy(xmx = it); parts += EnvironmentPart.VM_OPTIONS }
         debugSuspend?.let { result = result.copy(debugSuspend = it) }
