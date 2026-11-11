@@ -369,6 +369,22 @@ class CommandsTest {
     }
 
     @Test
+    fun `select opened file can be switched off and on again`() {
+        run("create", "2026.1")
+        val projectView = File(env("2026.1"), "mps/config/options/projectView.xml")
+        assertTrue("value=\"true\"" in projectView.readText(), projectView.readText())
+        assertEquals("true", props(env("2026.1")).getProperty("selectOpenedFile"))
+
+        run("refresh", "2026.1", "--no-select-opened-file")
+        assertTrue("value=\"false\"" in projectView.readText(), projectView.readText())
+        assertEquals("false", props(env("2026.1")).getProperty("selectOpenedFile"))
+
+        run("refresh", "2026.1", "-a")
+        assertTrue("value=\"true\"" in projectView.readText(), projectView.readText())
+        assertEquals("true", props(env("2026.1")).getProperty("selectOpenedFile"))
+    }
+
+    @Test
     fun `http port is fixed only on request`() {
         run("create", "2026.1")
         assertNull(props(env("2026.1")).getProperty("httpPort"))

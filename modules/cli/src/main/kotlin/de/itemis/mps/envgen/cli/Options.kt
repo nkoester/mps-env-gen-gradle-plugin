@@ -76,6 +76,10 @@ class SettingsOptions : OptionGroup("Environment settings") {
     val mergeDriverNotification by option("-N", "--merge-driver-notification",
         help = "MPS shows the VCS Addons popup about the merge driver (disabled by default, the message is still logged)")
         .nullableFlag("--no-merge-driver-notification")
+    val selectOpenedFile by option("-a", "--select-opened-file",
+        help = "the project view always selects the node opened in the editor (\"Always Select Opened File\")",
+        helpTags = mapOf(HelpFormatter.Tags.DEFAULT to "true"))
+        .nullableFlag("--no-select-opened-file")
 
     /**
      * applies the given settings to [spec]; ports marked [AUTO_PORT] are allocated against [usedPorts].
@@ -91,6 +95,7 @@ class SettingsOptions : OptionGroup("Environment settings") {
         modelCheck?.let { result = result.copy(modelCheckBeforeGeneration = it); parts += EnvironmentPart.MODEL_CHECK }
         updateChecks?.let { result = result.copy(updateChecks = it); parts += EnvironmentPart.UPDATES }
         mergeDriverNotification?.let { result = result.copy(mergeDriverNotification = it); parts += EnvironmentPart.NOTIFICATIONS }
+        selectOpenedFile?.let { result = result.copy(selectOpenedFile = it); parts += EnvironmentPart.PROJECT_VIEW }
         xms?.let { result = result.copy(xms = it); parts += EnvironmentPart.VM_OPTIONS }
         xmx?.let { result = result.copy(xmx = it); parts += EnvironmentPart.VM_OPTIONS }
         debugSuspend?.let { result = result.copy(debugSuspend = it) }

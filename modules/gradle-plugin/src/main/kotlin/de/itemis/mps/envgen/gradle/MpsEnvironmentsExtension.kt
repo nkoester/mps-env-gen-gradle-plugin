@@ -130,6 +130,9 @@ abstract class MpsEnvironment @Inject constructor(private val name: String, obje
     /** MPS shows the VCS Addons popup about the merge driver; default: false, the message is still logged */
     abstract val mergeDriverNotification: Property<Boolean>
 
+    /** the project view always selects the node opened in the editor ("Always Select Opened File"); default: true */
+    abstract val selectOpenedFile: Property<Boolean>
+
     /** additional lines of the vmoptions file */
     abstract val vmOptions: ListProperty<String>
 

@@ -139,6 +139,7 @@ mpsEnvironments {
             theme.set(Theme.DARK)
             updateChecks.set(false)                 // no update checks for MPS and plugins; default: true
             mergeDriverNotification.set(true)       // VCS Addons merge driver popup; default: false (still logged)
+            selectOpenedFile.set(false)             // project view "Always Select Opened File"; default: true
             os.set(listOf(OS.LINUX, OS.WINDOWS))    // start scripts to generate; default: current OS
             vmOptions.add("-Dmy.option=1")          // extra lines for mps64.vmoptions
             ideaProperties.add("my.property=1")     // extra lines for idea.properties
@@ -294,7 +295,7 @@ CLI:
 - options and arguments may come in any order
 - the optional values of `--start` and `--debug` must be attached: `--start=tmuxLA`, `-s=tmuxLA`, `--debug=5005`, `-x5005`
 
-Settings stored in files that MPS also edits (heap, theme, model check, update checks, merge driver popup, VM options, IDEA properties, project) are written only if the file is missing, or when explicitly requested (`refresh` with the option or `--reset-settings`, Gradle `--overwrite-settings`), see "5.4 Changes to generated environments".
+Settings stored in files that MPS also edits (heap, theme, model check, update checks, merge driver popup, select opened file, VM options, IDEA properties, project) are written only if the file is missing, or when explicitly requested (`refresh` with the option or `--reset-settings`, Gradle `--overwrite-settings`), see "5.4 Changes to generated environments".
 
 ## 3.1 CLI defaults file and environment variables
 
@@ -312,6 +313,29 @@ theme=dark
 - `copy` and `refresh` ignore the file and use the settings stored in the environment
 - the environment variables `MPS_ENV_GEN_TARGET`, `MPS_ENV_GEN_INSTALLS` (fallback `MPS_BASE_PATH`), `MPS_ENV_GEN_REPOSITORY` and `MPS_ENV_GEN_CACHE` set the options of the same name
 - the command line overrides environment variables, which override the defaults file
+
+## 3.2 Defaults
+
+Every environment starts from these assumptions.
+Override them per environment (Gradle `register("<name>") { }`), for all environments (Gradle `mpsEnvironments { }`, CLI defaults file, see "3.1"), or on the command line.
+
+| Default | Gradle | CLI |
+|---|---|---|
+| light theme; new UI (MPS 2024.3+) with compact density | `theme.set(Theme.DARK)` | `-e dark` |
+| no model check before generation | `modelCheckBeforeGeneration.set(true)` | `-g` |
+| update checks for MPS and plugins on | `updateChecks.set(false)` | `--no-update-checks` |
+| VCS Addons merge driver popup off (still logged) | `mergeDriverNotification.set(true)` | `-N` |
+| project view "Always Select Opened File" on | `selectOpenedFile.set(false)` | `--no-select-opened-file` |
+| heap `-Xms1024m -Xmx2048m -XX:NewRatio=4` | `xms`, `xmx`, `ratio` | `-L`, `-M` |
+| remote debugging off; port Gradle 5071, CLI 51337 | `debug.set(true)`, `debugPort` | `-x[=PORT]`, start script `-d` |
+| node URL port: first free from 63321 | `httpPort.set(<port>)` | `--http-port <port>` |
+
+Fixed, without an option (change them in MPS, or with `vmOptions` / `--vm-option`, see "5.6"):
+- no tips on startup, no "what's new" page, new UI onboarding counted as seen
+- a given project is trusted and opened on first start
+- no "import settings" dialog, no freeze reports, no usage statistics
+
+Existing environments keep their settings files; to apply a changed default, see "5.4 Changes to generated environments".
 
 # 4. Release packages
 
@@ -391,7 +415,7 @@ Neither Gradle nor `mps-env-gen` overwrites them unless told to:
 
 - `mps/mps64.vmoptions`, of which the start script updates only the node URL port line and generation only the plugin block (see "5.5 Plugins")
 - `mps/idea.properties`, of which only the five `idea.*.path` keys follow the location
-- `mps/config/options/`: `laf.xml`, `colors.scheme.xml`, `ui.lnf.xml`, `ide.general.xml`, `other.xml`, `updates.xml`, `notifications.xml`, `generationSettings.xml`, `recentProjects.xml`, `trusted-paths.xml`
+- `mps/config/options/`: `laf.xml`, `colors.scheme.xml`, `ui.lnf.xml`, `ide.general.xml`, `other.xml`, `updates.xml`, `notifications.xml`, `projectView.xml`, `generationSettings.xml`, `recentProjects.xml`, `trusted-paths.xml`
 - `mps/config/early-access-registry.txt`
 
 Always written:

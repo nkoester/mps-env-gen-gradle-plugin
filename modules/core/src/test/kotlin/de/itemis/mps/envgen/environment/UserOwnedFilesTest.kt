@@ -86,6 +86,25 @@ class UserOwnedFilesTest {
     }
 
     @Test
+    fun `project view selects the opened file by default and can be switched off`() {
+        val spec = spec()
+        generator().generate(spec)
+        val projectView = File(options(spec), "projectView.xml")
+        val on = "<option name=\"autoscrollFromSource\" value=\"true\" />"
+        assertTrue(on in projectView.readText(), projectView.readText())
+        assertTrue(EnvironmentMetadata.read(spec.environmentDir, spec)!!.spec.selectOpenedFile)
+
+        generator().generate(spec.copy(selectOpenedFile = false))
+        assertTrue(on in projectView.readText(), "kept without overwrite")
+        assertTrue("selectOpenedFile = false" in warnings.removeLast(), "unapplied setting is reported")
+
+        generator().generate(spec.copy(selectOpenedFile = false), overwrite = setOf(EnvironmentPart.PROJECT_VIEW))
+        assertTrue("<option name=\"autoscrollFromSource\" value=\"false\" />" in projectView.readText(), projectView.readText())
+        assertFalse(EnvironmentMetadata.read(spec.environmentDir, spec)!!.spec.selectOpenedFile)
+        assertTrue(warnings.isEmpty(), warnings.toString())
+    }
+
+    @Test
     fun `idea properties keep user lines but follow the location`() {
         val spec = spec()
         generator().generate(spec)

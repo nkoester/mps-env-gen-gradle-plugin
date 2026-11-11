@@ -59,6 +59,7 @@ object EnvironmentMetadata {
         set("modelCheckBeforeGeneration", spec.modelCheckBeforeGeneration)
         set("updateChecks", spec.updateChecks)
         set("mergeDriverNotification", spec.mergeDriverNotification)
+        set("selectOpenedFile", spec.selectOpenedFile)
         set("theme", spec.theme)
         set("xms", spec.xms)
         set("xmx", spec.xmx)
@@ -98,6 +99,7 @@ object EnvironmentMetadata {
             modelCheckBeforeGeneration = get("modelCheckBeforeGeneration")?.toBoolean() ?: template.modelCheckBeforeGeneration,
             updateChecks = get("updateChecks")?.toBoolean() ?: template.updateChecks,
             mergeDriverNotification = get("mergeDriverNotification")?.toBoolean() ?: template.mergeDriverNotification,
+            selectOpenedFile = get("selectOpenedFile")?.toBoolean() ?: template.selectOpenedFile,
             theme = get("theme")?.let { runCatching { Theme.valueOf(it) }.getOrNull() } ?: template.theme,
             xms = get("xms") ?: template.xms,
             xmx = get("xmx") ?: template.xmx,

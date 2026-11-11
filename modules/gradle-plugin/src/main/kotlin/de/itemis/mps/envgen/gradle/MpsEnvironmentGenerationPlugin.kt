@@ -42,6 +42,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
             modelCheckBeforeGeneration.convention(false)
             updateChecks.convention(true)
             mergeDriverNotification.convention(false)
+            selectOpenedFile.convention(true)
         }
 
         val distributions = DistributionTasks(project, extension)
@@ -105,6 +106,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
             modelCheckBeforeGeneration.set(environment.modelCheckBeforeGeneration)
             updateChecks.set(environment.updateChecks)
             mergeDriverNotification.set(environment.mergeDriverNotification)
+            selectOpenedFile.set(environment.selectOpenedFile)
             vmOptions.set(environment.vmOptions)
             ideaProperties.set(environment.ideaProperties)
             plugins.set(project.provider {
