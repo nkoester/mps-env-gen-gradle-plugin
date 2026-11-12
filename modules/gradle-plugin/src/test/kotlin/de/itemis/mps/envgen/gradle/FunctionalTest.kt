@@ -84,6 +84,25 @@ class FunctionalTest {
     }
 
     @Test
+    fun `writes environment without project`() {
+        buildFile.appendText(
+            """
+                    mpsEnvironments {
+                        mpsPath.set(Path(myMpsPath.toString()).toFile())
+                        environments.register("Default")
+                    }
+                """.trimIndent()
+        )
+
+        val result = gradleRunner().withArguments(":generateMpsEnvironment-Default").build()
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironment-Default")?.outcome)
+        assertTrue(File(testProjectDir, ".mpsconfig/Default/mps/idea.properties").exists())
+        val recentProjects = File(testProjectDir, ".mpsconfig/Default/mps/config/options/recentProjects.xml")
+        assertTrue(!recentProjects.exists() || !recentProjects.readText().contains(mpsTestProjectPath.path))
+    }
+
+    @Test
     fun `writes multiple environments`() {
         addMultipleEnvironments(buildFile)
 

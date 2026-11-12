@@ -1,7 +1,5 @@
 # MPS Environment Generation Gradle Plugin
 
-❗❗ Work in progress: pre-releases only, published to GitHub Packages (see [1.0](#10-get-the-plugin)) ❗❗
-
 Generates isolated MPS environments: each has its own configuration, caches, plugins and start script, so several can run in parallel without touching your default MPS setup.
 Typical uses: several checkouts of one repository, reviewing a pull request.
 
@@ -17,32 +15,24 @@ Requires Gradle 8.14+ on Java 17+ and supports the Kotlin and Groovy DSL.
 
 ## 1.0 Get the plugin
 
-Releases are published to GitHub Packages, which needs a token even for reading:
+Releases and snapshots are published to the itemis Nexus.
+Add the repository to `settings.gradle.kts`:
 
-1. Create a classic token with only the scope `read:packages` at https://github.com/settings/tokens/new (fine-grained tokens do not work)
-2. Add it to `~/.gradle/gradle.properties`:
-   ```properties
-   gpr.user=<github user>
-   gpr.token=ghp_...
-   ```
-3. Add the repository to `settings.gradle.kts` (see `example/settings.gradle.kts`):
-   ```kts
-   pluginManagement {
-       repositories {
-           maven {
-               url = uri("https://maven.pkg.github.com/nkoester/mps-env-gen-gradle-plugin")
-               credentials {
-                   username = providers.gradleProperty("gpr.user").orNull
-                   password = providers.gradleProperty("gpr.token").orNull
-               }
-               content { includeGroup("de.itemis.mps.envgen") }   // plugin, its marker and core
-           }
-           gradlePluginPortal()
-       }
-   }
-   ```
+```kts
+pluginManagement {
+    repositories {
+        maven("https://artifacts.itemis.cloud/repository/maven-mps") {
+            content { includeGroup("de.itemis.mps.envgen") }   // plugin, its marker and core
+        }
+        gradlePluginPortal()
+    }
+}
+```
 
-Versions: [releases](https://github.com/nkoester/mps-env-gen-gradle-plugin/releases), which also offer the CLI as zip and runnable jar.
+Versions:
+
+- releases `MAJOR.MINOR.PATCH`, see [releases](https://github.com/nkoester/mps-env-gen-gradle-plugin/releases), which also offer the CLI as zip and runnable jar
+- snapshots `MAJOR.MINOR.PATCH-SNAPSHOT`, published on demand; Gradle checks for a newer build once a day, `--refresh-dependencies` forces it
 
 ## 1.1 Usage
 
@@ -66,6 +56,7 @@ mpsEnvironments {
 Once Gradle configured the project, the following Gradle tasks are generated:
 
 Tasks (group `mps`):
+
 - `generateMpsEnvironment-default`: writes `.mpsconfig/default` including its start script `.mpsconfig/default/startMPS_LINUX_default.sh`
 - `generateMpsEnvironmentAll`: generates all environments
 - `prepareMps-<version>`: downloads MPS and a matching JBR from Nexus and prepares a runnable MPS in the shared cache folder (see "5.1 Downloaded MPS and cache folder").
@@ -119,7 +110,7 @@ import de.itemis.mps.envgen.environment.Theme
 mpsEnvironments {
     // defaults for all environments
     mpsVersion.set("2025.1.4")                                  // MPS 2022.2+ from Nexus
-    projectPath.set(layout.projectDirectory.dir("mps-project"))  // trusted and opened on first start
+    projectPath.set(layout.projectDirectory.dir("mps-project"))  // optional: trusted and opened on first start
     // also: mpsPath, jbrVersion, javaHome, targetPath (default .mpsconfig),
     //       mpsInTargetPath (prepare MPS in targetPath instead of the shared cache folder)
 
@@ -153,7 +144,6 @@ mpsEnvironments {
     }
 }
 ```
-
 
 The folder `example/` contains a complete project with more deatils.
 
@@ -230,7 +220,7 @@ Calling MPS:
     _JAVA_AWT_WM_NONREPARENTING=1 \
     MPS_JDK=/home/me/.cache/mps-env-gen/distributions/mps-2025.1.4-LINUX/jbr \
     /home/me/.cache/mps-env-gen/distributions/mps-2025.1.4-LINUX/bin/mps.sh
-    
+
 <MPS output ... >
 ```
 
@@ -258,7 +248,7 @@ Start it with (copied to the clipboard):
 Create a throw-away environment with a plugin installed (see "5.5 Plugins"):
 
 ```bash
-$ mps-env-gen create 2025.1.4 --temp --plugin ~/plugins/my-tool-1.0-2025.1.zip --start
+mps-env-gen create 2025.1.4 --temp --plugin ~/plugins/my-tool-1.0-2025.1.zip --start
 ```
 
 ## 2.3 Bash completion
@@ -272,6 +262,7 @@ source <(mps-env-gen completion bash)
 ```
 
 Completion of `<mps>` and `--mps`:
+
 - if an installations folder is given (`--installs` on the command line, else exported `MPS_ENV_GEN_INSTALLS` or `MPS_BASE_PATH`), it offers the versions in the folder names, e.g. `2026.1` for `MPS-2026.1-linux`.
   Folders without a version are not offered.
 - otherwise it offers the MPS versions on Nexus from a list packaged with the tool, without network access.
@@ -283,11 +274,13 @@ Completion of `<mps>` and `--mps`:
 # 3. Configuration options
 
 Gradle plugin:
+
 - settings in `mpsEnvironments { }` are defaults for all environments, settings in `register("<name>") { }` apply to one environment and win
 - the IDE's code completion in `build.gradle.kts` lists all settings with their documentation and defaults
 - `example/build.gradle.kts` is a complete project with commented settings, "1.1.2 Expert Variant" shows a compact overview
 
 CLI:
+
 - `mps-env-gen init-defaults --print` lists every option of `create` with its help text and default
 - `mps-env-gen <command> --help` shows the options of each command
 - `copy` and `refresh` accept the environment settings too and change only what is given
@@ -319,18 +312,19 @@ theme=dark
 Every environment starts from these assumptions.
 Override them per environment (Gradle `register("<name>") { }`), for all environments (Gradle `mpsEnvironments { }`, CLI defaults file, see "3.1"), or on the command line.
 
-| Default | Gradle | CLI |
-|---|---|---|
-| light theme; new UI (MPS 2024.3+) with compact density | `theme.set(Theme.DARK)` | `-e dark` |
-| no model check before generation | `modelCheckBeforeGeneration.set(true)` | `-g` |
-| update checks for MPS and plugins on | `updateChecks.set(false)` | `--no-update-checks` |
-| VCS Addons merge driver popup off (still logged) | `mergeDriverNotification.set(true)` | `-N` |
-| project view "Always Select Opened File" on | `selectOpenedFile.set(false)` | `--no-select-opened-file` |
-| heap `-Xms1024m -Xmx2048m -XX:NewRatio=4` | `xms`, `xmx`, `ratio` | `-L`, `-M` |
-| remote debugging off; port Gradle 5071, CLI 51337 | `debug.set(true)`, `debugPort` | `-x[=PORT]`, start script `-d` |
-| node URL port: first free from 63321 | `httpPort.set(<port>)` | `--http-port <port>` |
+| Default                                                | Gradle                                 | CLI                            |
+| ------------------------------------------------------ | -------------------------------------- | ------------------------------ |
+| light theme; new UI (MPS 2024.3+) with compact density | `theme.set(Theme.DARK)`                | `-e dark`                      |
+| no model check before generation                       | `modelCheckBeforeGeneration.set(true)` | `-g`                           |
+| update checks for MPS and plugins on                   | `updateChecks.set(false)`              | `--no-update-checks`           |
+| VCS Addons merge driver popup off (still logged)       | `mergeDriverNotification.set(true)`    | `-N`                           |
+| project view "Always Select Opened File" on            | `selectOpenedFile.set(false)`          | `--no-select-opened-file`      |
+| heap `-Xms1024m -Xmx2048m -XX:NewRatio=4`              | `xms`, `xmx`, `ratio`                  | `-L`, `-M`                     |
+| remote debugging off; port Gradle 5071, CLI 51337      | `debug.set(true)`, `debugPort`         | `-x[=PORT]`, start script `-d` |
+| node URL port: first free from 63321                   | `httpPort.set(<port>)`                 | `--http-port <port>`           |
 
 Fixed, without an option (change them in MPS, or with `vmOptions` / `--vm-option`, see "5.6"):
+
 - no tips on startup, no "what's new" page, new UI onboarding counted as seen
 - a given project is trusted and opened on first start
 - no "import settings" dialog, no freeze reports, no usage statistics
@@ -358,12 +352,13 @@ When just providing a version, any MPS from 2022.2 on is usable and will be down
 The itemis Nexus provides MPS only as the OS-independent zip without a Java runtime, so the tool also downloads the matching JetBrains Runtime (`jbr_jcef` for the host OS and architecture) and assembles both into a runnable MPS, `mps-<version>-<OS>`.
 
 ### 5.1.1 Locations
+
 When downloaded, the tool puts the MPS in:
 
-| | Downloaded archives                                                       | Prepared MPS (`mps-<version>-<OS>`) |
-|---|---------------------------------------------------------------------------|---|
-| Gradle plugin | Gradle's dependency cache (`~/.gradle/caches`), which the build uses also | `<cache>/distributions/` |
-| CLI | `<cache>/downloads/`                                                      | `<cache>/distributions/` |
+|               | Downloaded archives                                                       | Prepared MPS (`mps-<version>-<OS>`) |
+| ------------- | ------------------------------------------------------------------------- | ----------------------------------- |
+| Gradle plugin | Gradle's dependency cache (`~/.gradle/caches`), which the build uses also | `<cache>/distributions/`            |
+| CLI           | `<cache>/downloads/`                                                      | `<cache>/distributions/`            |
 
 One prepared MPS per version is shared by all environments, projects, the CLI and the Gradle plugin.
 This saves about 1.5 GB per version and checkout, keeps throw-away environments small, and survives `git clean -xdf`.
@@ -372,11 +367,11 @@ The default cache dir can be overwritten via `cache-dir` or set to be next to th
 
 **Cache folder** (`<cache>`):
 
-| OS | Default |
-|---|---|
-| Linux | `$XDG_CACHE_HOME/mps-env-gen`, otherwise `~/.cache/mps-env-gen` |
-| macOS | `~/Library/Caches/mps-env-gen` |
-| Windows | `%LOCALAPPDATA%\mps-env-gen\cache` |
+| OS      | Default                                                         |
+| ------- | --------------------------------------------------------------- |
+| Linux   | `$XDG_CACHE_HOME/mps-env-gen`, otherwise `~/.cache/mps-env-gen` |
+| macOS   | `~/Library/Caches/mps-env-gen`                                  |
+| Windows | `%LOCALAPPDATA%\mps-env-gen\cache`                              |
 
 - `MPS_ENV_GEN_CACHE` sets another folder for the CLI and the Gradle plugin, the CLI also has `--cache-dir`
 - a prepared MPS takes about ~1.5 GB per version, plus its downloaded archives
@@ -384,6 +379,7 @@ The default cache dir can be overwritten via `cache-dir` or set to be next to th
 - the folder can be deleted at any time: archives are downloaded again when needed, and `mps-env-gen refresh <env>` or `./gradlew generateMpsEnvironment-<Name>` prepares a missing MPS again
 
 ## 5.2 Start scripts
+
 - `startMPS_<OS>_<name>.sh|.bat` starts MPS with the environment and needs neither Gradle nor `mps-env-gen`
 - after moving an environment, the Linux/macOS scripts detect it and offer to fix the paths
 - debugging is off by default.
@@ -393,6 +389,7 @@ The default cache dir can be overwritten via `cache-dir` or set to be next to th
 - debug starts use a per-start copy of the vmoptions, `mps/mps64.runtime.vmoptions`
 
 ## 5.3 Node URL port
+
 MPS opens nodes from URLs (`http://127.0.0.1:<port>/node`) on the port in `-Dide.httpsupport.internalPort`.
 The start script sets it in `mps/mps64.vmoptions` at every start and prints it:
 
@@ -400,16 +397,17 @@ The start script sets it in `mps/mps64.vmoptions` at every start and prints it:
 Node URL port: 63321 (first free from 63321)  http://127.0.0.1:63321/node
 ```
 
-| Setting | Behaviour at start |
-|---|---|
-| not set (default) | uses the first free port from 63321 to 63341. If none is free, MPS is not started. |
-| fixed (`httpPort` / `--http-port <port>`) | uses this port. If it is in use, MPS is not started (exit code 1). |
+| Setting                                   | Behaviour at start                                                                 |
+| ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| not set (default)                         | uses the first free port from 63321 to 63341. If none is free, MPS is not started. |
+| fixed (`httpPort` / `--http-port <port>`) | uses this port. If it is in use, MPS is not started (exit code 1).                 |
 
 - a fixed port is stored in `environment.properties` and shown when the environment is created or refreshed.
   Without a fixed port, nothing is stored or shown.
 - `mps-env-gen refresh <env> --http-port auto` returns to the default
 
 ## 5.4 Changes to generated environments
+
 Files with MPS settings or meant for editing are written **only if missing**.
 Neither Gradle nor `mps-env-gen` overwrites them unless told to:
 
@@ -426,6 +424,7 @@ Always written:
 
 A changed setting (e.g. `xmx`, `theme`) therefore only affects new environments.
 To apply it to an existing one:
+
 - Gradle: `./gradlew generateMpsEnvironment-<Name> --overwrite-settings` (the build output reports settings that were not applied)
 - CLI: `mps-env-gen refresh <env> --reset-settings`, or one option, e.g. `refresh <env> --xmx 6g`
 
@@ -433,6 +432,7 @@ Replaced files are kept in `<env>/.backup/<timestamp>/`.
 "Help > Edit Custom VM Options" in MPS edits `mps/mps64.vmoptions`, except in debug starts.
 
 ## 5.5 Plugins
+
 Plugin zips or folders are installed into the environment's own plugin folder `mps/plugins`, next to plugins installed from within MPS.
 Language libraries of a project (e.g. MPS-extensions resolved by Gradle into `.mps/libraries.xml`) do not belong here.
 
@@ -457,12 +457,13 @@ my-tool.compatible=true
 
 Compatibility is checked against the MPS build before anything is written:
 
-| `plugin.xml` | Result |
-|---|---|
-| `since-build` later than the MPS build, or `until-build` earlier | error, point to the build of the plugin for this MPS version |
+| `plugin.xml`                                                                                                            | Result                                                                                                                                 |
+| ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `since-build` later than the MPS build, or `until-build` earlier                                                        | error, point to the build of the plugin for this MPS version                                                                           |
 | no `until-build` and built for another MPS series (e.g. `since-build="251"` on MPS 2026.1), or no readable `plugin.xml` | uncertain: the CLI asks `Install anyway? [y/N]` (without a terminal: error, use `--plugin-compatible`), Gradle installs with a warning |
 
 Installation:
+
 - Unchanged plugins are kept; replaced zips, changed folders and missing plugin folders are installed again.
 - Plugins no longer declared are removed. Folders of plugins installed otherwise are never touched; a declared plugin does not replace one unless `--reinstall-plugins` is given.
 - The plugin properties are written into a block at the end of `mps/mps64.vmoptions`, rewritten on every generation, also when the file is kept. They win over the same `-D` in `vmOptions`.
@@ -481,30 +482,30 @@ Other plugins in mps/plugins: installed-from-mps
 It warns about missing plugin folders, plugins disabled in MPS (`config/disabled_plugins.txt`) and the warnings of the installation, and does not start MPS if a plugin port is in use.
 
 ## 5.6 vmoptions defaults
+
 `mps/mps64.vmoptions` combines the MPS defaults with those of the earlier bash tool mps-zookeeper.
 The reasons are the assumptions behind them, taken over and not re-verified for every MPS version:
 
-| Option | Why |
-|---|---|
-| `-Xms1024m`, `-Xmx2048m`, `-XX:NewRatio=4` | configurable (`xms`, `xmx`, `ratio`) |
-| `-XX:ReservedCodeCacheSize=1024m` | larger than MPS' 512m, because MPS compiles a lot of generated code |
-| `-Xss1024k`, `-XX:NewSize=256m` | deep model/generator recursion, young generation for short-lived model objects |
-| `-Dintellij.config.imported.in.current.session=true`, `-Didea.initially.ask.config=true` | no "import settings" dialog |
-| `-Dperformance.watcher.freeze.report=false`, `-Dfreeze.reporter.enabled=false` | no freeze reports |
-| `-Didea.suppress.statistics.report=true`, `-Didea.disable.collect.statistics=true` | no usage statistics (telemetry), regardless of the machine-wide consent in `~/.local/share/JetBrains/consentOptions`. MPS sends nothing and, from 2023.3 on, does not collect either. |
-| `-Djava.net.preferIPv4Stack=true` | node URLs and debugging on `127.0.0.1` |
-| `-Dawt.useSystemAAFontSettings=lcd`, `-Dsun.java2d.renderer=sun.java2d.marlin.MarlinRenderingEngine` | font antialiasing and renderer as in mps-zookeeper (Linux desktops) |
-| `-Didea.log.config.file=log.xml` | log configuration as in mps-zookeeper. MPS 2022.3+ ships `log.properties` instead, the effect there is unverified. |
-| `-Dide.httpsupport.internalPort=<port>` | node URL port, see "5.3 Node URL port" |
-| `-agentlib:jdwp=...address=127.0.0.1:<port>` | debug starts only, `#`-commented otherwise |
+| Option                                                                                               | Why                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-Xms1024m`, `-Xmx2048m`, `-XX:NewRatio=4`                                                           | configurable (`xms`, `xmx`, `ratio`)                                                                                                                                                  |
+| `-XX:ReservedCodeCacheSize=1024m`                                                                    | larger than MPS' 512m, because MPS compiles a lot of generated code                                                                                                                   |
+| `-Xss1024k`, `-XX:NewSize=256m`                                                                      | deep model/generator recursion, young generation for short-lived model objects                                                                                                        |
+| `-Dintellij.config.imported.in.current.session=true`, `-Didea.initially.ask.config=true`             | no "import settings" dialog                                                                                                                                                           |
+| `-Dperformance.watcher.freeze.report=false`, `-Dfreeze.reporter.enabled=false`                       | no freeze reports                                                                                                                                                                     |
+| `-Didea.suppress.statistics.report=true`, `-Didea.disable.collect.statistics=true`                   | no usage statistics (telemetry), regardless of the machine-wide consent in `~/.local/share/JetBrains/consentOptions`. MPS sends nothing and, from 2023.3 on, does not collect either. |
+| `-Djava.net.preferIPv4Stack=true`                                                                    | node URLs and debugging on `127.0.0.1`                                                                                                                                                |
+| `-Dawt.useSystemAAFontSettings=lcd`, `-Dsun.java2d.renderer=sun.java2d.marlin.MarlinRenderingEngine` | font antialiasing and renderer as in mps-zookeeper (Linux desktops)                                                                                                                   |
+| `-Didea.log.config.file=log.xml`                                                                     | log configuration as in mps-zookeeper. MPS 2022.3+ ships `log.properties` instead, the effect there is unverified.                                                                    |
+| `-Dide.httpsupport.internalPort=<port>`                                                              | node URL port, see "5.3 Node URL port"                                                                                                                                                |
+| `-agentlib:jdwp=...address=127.0.0.1:<port>`                                                         | debug starts only, `#`-commented otherwise                                                                                                                                            |
 
 Add or override options with `vmOptions` (Gradle) or `--vm-option` (CLI).
 Later lines win.
 
-## 5.7 Other 
+## 5.7 Other
 
 ### Use with git
-
 
 **`git clean` deletes the environments.**
 

@@ -46,7 +46,7 @@ abstract class MpsEnvironmentsExtension @Inject constructor(objects: ObjectFacto
     /** JBR/JDK to run MPS with; default: the JBR of a prepared MPS */
     abstract val javaHome: DirectoryProperty
 
-    /** MPS project to trust and open */
+    /** MPS project to trust and open on first start; optional */
     abstract val projectPath: DirectoryProperty
 
     /** folder of the environments; default `.mpsconfig` */
@@ -91,7 +91,7 @@ abstract class MpsEnvironment @Inject constructor(private val name: String, obje
     /** JBR/JDK to run MPS with; default: the JBR of a prepared MPS */
     abstract val javaHome: DirectoryProperty
 
-    /** MPS project to trust and open on first start; overrides the default */
+    /** MPS project to trust and open on first start; overrides the default; optional */
     abstract val projectPath: DirectoryProperty
 
     /** start scripts to generate; default: the current OS */

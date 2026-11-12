@@ -53,8 +53,10 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     @get:Optional
     abstract val javaHome: DirectoryProperty
 
+    /** MPS project to trust and open on first start; optional */
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.ABSOLUTE)
+    @get:Optional
     abstract val projectPath: DirectoryProperty
 
     @get:Input abstract val xms: Property<String>
@@ -126,7 +128,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 os = os.get(),
                 mpsPath = mpsPath.get().asFile,
                 javaHome = javaHome.orNull?.asFile,
-                projectPath = projectPath.get().asFile,
+                projectPath = projectPath.orNull?.asFile,
                 modelCheckBeforeGeneration = modelCheckBeforeGeneration.get(),
                 updateChecks = updateChecks.get(),
                 mergeDriverNotification = mergeDriverNotification.get(),
