@@ -72,6 +72,18 @@ mpsEnvironments {
             debugSuspend.set(true)   // wait for a debugger (default: false)
             // for full control, leave debug off and add your own line: vmOptions.add("-agentlib:jdwp=...")
         }
+
+        // plugin zips or folders installed into the environment (see README "5.5 Plugins"); not language libraries,
+        // which mps-project gets from build/dependencies:
+        // register("3-plugins") {
+        //     pluginsFile.set(file("mps-plugins.properties"))   // <name>=<zip or folder>, shared with the CLI
+        //     plugins {
+        //         register("my-tool") {
+        //             from("tools/my-tool-1.0-2022.2.zip")
+        //             ports.put("my.tool.port", 8600)            // MPS does not start if the port is in use
+        //         }
+        //     }
+        // }
     }
 }
 

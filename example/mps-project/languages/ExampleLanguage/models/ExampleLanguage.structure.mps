@@ -26,7 +26,7 @@
       </concept>
     </language>
     <language id="ceab5195-25ea-4f22-9b92-103b95ca8c0c" name="jetbrains.mps.lang.core">
-      <concept id="1169194658468" name="jetbrains.mps.lang.core.structure.INamedConcept" flags="ng" index="TrEIO">
+      <concept id="1169194658468" name="jetbrains.mps.lang.core.structure.INamedConcept" flags="ngI" index="TrEIO">
         <property id="1169194664001" name="name" index="TrG5h" />
       </concept>
     </language>
@@ -35,7 +35,7 @@
     <property role="EcuMT" value="4849987038620949391" />
     <property role="TrG5h" value="TestConcept" />
     <property role="19KtqR" value="true" />
-    <ref role="1TJDcQ" to="tpck:gw2VY9q" />
+    <ref role="1TJDcQ" to="tpck:gw2VY9q" resolve="BaseConcept" />
     <node concept="1TJgyj" id="4deBofEgrRp" role="1TKVEi">
       <property role="IQ2ns" value="4849987038621056473" />
       <property role="20kJfa" value="testReference" />
@@ -46,7 +46,7 @@
     <property role="EcuMT" value="4849987038621055821" />
     <property role="TrG5h" value="AnotherConcept" />
     <property role="19KtqR" value="true" />
-    <ref role="1TJDcQ" to="tpck:gw2VY9q" />
+    <ref role="1TJDcQ" to="tpck:gw2VY9q" resolve="BaseConcept" />
     <node concept="1TJgyj" id="7y5e6Vti7NF" role="1TKVEi">
       <property role="IQ2ns" value="8684409505263942891" />
       <property role="20lmBu" value="fLJjDmT/aggregation" />
