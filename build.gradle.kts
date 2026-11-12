@@ -9,14 +9,17 @@ plugins {
 allprojects {
     group = "de.itemis.mps.envgen"
 }
-version = if (projectDir.resolve("version.txt").exists()){
+// release and snapshot builds: version.txt (written by the release workflow from the tag); all others: <branch>-SNAPSHOT
+version = if (projectDir.resolve("version.txt").exists()) {
     projectDir.resolve("version.txt").readText().trim()
 } else {
-    gitBranch(true) + (if (!project.findProperty("ciBuild")?.toString().toBoolean()) "-SNAPSHOT" else "")
+    gitBranch().replace(Regex("[^A-Za-z0-9._-]"), "-") + "-SNAPSHOT"
 }
 
 logger.lifecycle("Building version: $version")
 subprojects { version = rootProject.version }
+val isSnapshot = version.toString().endsWith("-SNAPSHOT")
+val gitHubUrl = "https://github.com/nkoester/mps-env-gen-gradle-plugin"
 
 // write the version to the MANIFEST of all jars; read by the generator for its output
 allprojects {
@@ -29,7 +32,26 @@ allprojects {
 // shared by all published modules (gradle-plugin, core)
 allprojects {
     plugins.withId("maven-publish") {
-        extensions.configure<PublishingExtension> { configureRepositories(project) }
+        extensions.configure<PublishingExtension> {
+            configureRepositories(project)
+            publications.withType<MavenPublication>().configureEach { pom { configurePom() } }
+        }
+        guardRemotePublishing(project)
+    }
+}
+
+fun MavenPom.configurePom() {
+    url.set(gitHubUrl)
+    licenses {
+        license {
+            name.set("The Apache License, Version 2.0")
+            url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+        }
+    }
+    scm {
+        connection.set("scm:git:https://github.com/nkoester/mps-env-gen-gradle-plugin.git")
+        developerConnection.set("scm:git:ssh://git@github.com/nkoester/mps-env-gen-gradle-plugin.git")
+        url.set(gitHubUrl)
     }
 }
 
@@ -41,7 +63,7 @@ fun PublishingExtension.configureRepositories(project: Project) {
             name = "release"
             url = uri(rootProject.layout.buildDirectory.dir("release/maven"))
         }
-        // GitHub Packages of the repository a workflow runs in;
+        // GitHub Packages of the repository a workflow runs in (same releases and snapshots as the itemis Nexus);
         // credentials: ORG_GRADLE_PROJECT_gitHubPackagesUsername/Password (checked only when publishing there)
         val gitHubRepository = providers.environmentVariable("GITHUB_REPOSITORY")
         if (gitHubRepository.isPresent) {
@@ -51,13 +73,16 @@ fun PublishingExtension.configureRepositories(project: Project) {
                 credentials(PasswordCredentials::class)
             }
         }
-        // itemis Nexus, only with credentials (release workflow or ~/.gradle/gradle.properties); the CLI is not published
+        // itemis Nexus, only with credentials: Gradle properties (~/.gradle/gradle.properties) or environment
+        // variables (workflows); snapshots and releases go to separate repositories; the CLI is not published
         val itemisCloudUser = providers.gradleProperty("artifacts.itemis.cloud.user")
+            .orElse(providers.environmentVariable("ARTIFACTS_ITEMIS_CLOUD_USER"))
         val itemisCloudPw = providers.gradleProperty("artifacts.itemis.cloud.pw")
+            .orElse(providers.environmentVariable("ARTIFACTS_ITEMIS_CLOUD_PW"))
         if (itemisCloudUser.isPresent && itemisCloudPw.isPresent) {
             maven {
                 name = "itemisCloud"
-                url = uri("https://artifacts.itemis.cloud/repository/maven-mps-releases/")
+                url = uri("https://artifacts.itemis.cloud/repository/" + if (isSnapshot) "maven-mps-snapshots/" else "maven-mps-releases/")
                 credentials {
                     username = itemisCloudUser.get()
                     password = itemisCloudPw.get()
@@ -67,23 +92,42 @@ fun PublishingExtension.configureRepositories(project: Project) {
     }
 }
 
-fun gitBranch(hash: Boolean = false): String {
-    val args = if (hash) listOf("git", "rev-parse", "--short", "HEAD") else listOf("git", "rev-parse", "--abbrev-ref", "HEAD")
+// remote repositories cannot be cleaned up: only MAJOR.MINOR.PATCH and MAJOR.MINOR.PATCH-SNAPSHOT are published;
+// local <branch>-SNAPSHOT builds never are
+fun guardRemotePublishing(project: Project) {
+    val published = version.toString()
+    val publishable = Regex("""\d+\.\d+\.\d+(-SNAPSHOT)?""").matches(published)
+    project.tasks.withType<PublishToMavenRepository>().configureEach {
+        if (!name.endsWith("ToItemisCloudRepository") && !name.endsWith("ToGitHubPackagesRepository")) return@configureEach
+        doFirst {
+            if (!publishable) {
+                throw GradleException("Refusing to publish version '$published': must be MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-SNAPSHOT")
+            }
+        }
+    }
+}
+
+fun gitBranch(): String {
+    // detached HEAD in GitHub workflows (pull requests): branch from the workflow environment
+    val workflowBranch = providers.environmentVariable("GITHUB_HEAD_REF").filter { it.isNotEmpty() }
+        .orElse(providers.environmentVariable("GITHUB_REF_NAME"))
     return try {
         val result = providers.exec {
-            commandLine(args)
+            commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
             isIgnoreExitValue = true
         }
         val output = result.standardOutput.asText.get().trim()
-        if (result.result.get().exitValue != 0) {
-            logger.warn("Unable to determine current branch: ${result.standardError.asText.get().trim()}")
-            return "Unknown Branch"
+        when {
+            result.result.get().exitValue != 0 -> {
+                logger.warn("Unable to determine current branch: ${result.standardError.asText.get().trim()}")
+                workflowBranch.getOrElse("unknown")
+            }
+            output == "HEAD" -> workflowBranch.getOrElse("HEAD")
+            else -> output
         }
-        if (output == "HEAD") logger.warn("Unable to determine current branch: Project is checked out with detached head!")
-        output
     } catch (e: Exception) {
         logger.warn("Unable to determine current branch: ${e.message}")
-        "Unknown Branch"
+        workflowBranch.getOrElse("unknown")
     }
 }
 

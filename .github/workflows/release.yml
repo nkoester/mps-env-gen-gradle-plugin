@@ -1,11 +1,19 @@
 name: Release
 
-# Tag v<version> or <version> (e.g. v0.2.0, 0.2.0-rc1); a tag with a qualifier becomes a pre-release
+# Release:  tag v<MAJOR.MINOR.PATCH> (e.g. v0.2.0)          -> itemis Nexus (maven-mps-releases), GitHub Packages, GitHub release
+# Snapshot: tag v<MAJOR.MINOR.PATCH>-SNAPSHOT (e.g. v0.2.0-SNAPSHOT) -> itemis Nexus (maven-mps-snapshots), GitHub Packages
+# Both Maven repositories always hold the same versions.
+# The leading v is optional. No pre-releases.
 on:
   push:
     tags:
       - 'v[0-9]*'
       - '[0-9]*'
+
+# never two releases of the same tag at once
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write   # GitHub release
@@ -34,42 +42,54 @@ jobs:
           # releases always build from scratch
           cache-read-only: true
 
-      - name: Use tag as version
-        run: echo "${GITHUB_REF_NAME#v}" > version.txt
+      # published versions cannot be deleted from the itemis Nexus; the build checks this again before publishing
+      - name: Check tag and use it as version
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?$ ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME is neither v<MAJOR.MINOR.PATCH> nor v<MAJOR.MINOR.PATCH>-SNAPSHOT"
+            exit 1
+          fi
+          # GitHub Packages and the itemis Nexus must hold the same versions
+          if [[ "$HAS_ITEMIS_CLOUD" != true ]]; then
+            echo "::error::Secrets ARTIFACTS_ITEMIS_CLOUD_USER/PW are missing"
+            exit 1
+          fi
+          snapshot=false
+          [[ "$version" == *-SNAPSHOT ]] && snapshot=true
+          echo "$version" > version.txt
+          echo "snapshot=$snapshot" >> "$GITHUB_OUTPUT"
 
       # build + tests of all modules, Maven artifacts in build/release/maven, CLI (JVM zip, jar) in build/release/cli;
       # the native CLI is a local option only (installNativeCli)
       - name: Build, test and package
-        run: ./gradlew packageAll -PciBuild=true -PskipNative=true --stacktrace
+        run: ./gradlew packageAll -PskipNative=true --stacktrace
 
       - name: Publish to GitHub Packages
         env:
           ORG_GRADLE_PROJECT_gitHubPackagesUsername: ${{ github.actor }}
           ORG_GRADLE_PROJECT_gitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
         run: >-
-          ./gradlew -PciBuild=true --stacktrace
+          ./gradlew --stacktrace
           :core:publishAllPublicationsToGitHubPackagesRepository
           :gradle-plugin:publishAllPublicationsToGitHubPackagesRepository
 
-      # Gradle plugin (with marker and core) only; skipped without the secrets, e.g. in forks
+      # Gradle plugin (with marker and core) only; after GitHub Packages, whose versions can be deleted if this fails
       - name: Publish to itemis Nexus
-        if: env.HAS_ITEMIS_CLOUD == 'true'
         env:
-          ITEMIS_CLOUD_USER: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_USER }}
-          ITEMIS_CLOUD_PW: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_PW }}
+          ARTIFACTS_ITEMIS_CLOUD_USER: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_USER }}
+          ARTIFACTS_ITEMIS_CLOUD_PW: ${{ secrets.ARTIFACTS_ITEMIS_CLOUD_PW }}
         run: >-
-          ./gradlew -PciBuild=true --stacktrace
-          "-Partifacts.itemis.cloud.user=$ITEMIS_CLOUD_USER" "-Partifacts.itemis.cloud.pw=$ITEMIS_CLOUD_PW"
+          ./gradlew --stacktrace
           :core:publishAllPublicationsToItemisCloudRepository
           :gradle-plugin:publishAllPublicationsToItemisCloudRepository
 
       - name: Create GitHub release
+        if: steps.version.outputs.snapshot == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          prerelease=""
-          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease="--prerelease"
-          gh release create "$GITHUB_REF_NAME" build/release/cli/* --title "$GITHUB_REF_NAME" --generate-notes $prerelease
+        run: gh release create "$GITHUB_REF_NAME" build/release/cli/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
 
       - name: Upload test reports
         if: failure()
