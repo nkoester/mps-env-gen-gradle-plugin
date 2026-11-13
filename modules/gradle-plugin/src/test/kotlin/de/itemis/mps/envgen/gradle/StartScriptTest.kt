@@ -30,11 +30,11 @@ class StartScriptTest {
     private fun fakeLauncher(relative: String, name: String) =
         File(mpsDir, relative).apply {
             parentFile.mkdirs()
-            writeText("#!/bin/sh\necho \"LAUNCHED $name\"\nenv | grep -E '^(MPS_|IDEA_VM)' | sort\n")
+            writeText("#!/bin/sh\necho \"LAUNCHED $name\"\nenv | grep -E '^(MPS_|IDEA_VM|IDE_JVM_ARGS)' | sort\n")
             setExecutable(true)
         }
 
-    private fun generate(): File {
+    private fun generate(os: OS = platform.os): File {
         File(projectDir, "settings.gradle.kts").writeText("")
         File(projectDir, "mps-project/.mps").mkdirs()
         jbrDir.mkdirs()
@@ -48,18 +48,21 @@ class StartScriptTest {
                 mpsPath.set(file(file("mps-path.txt").readText()))
                 javaHome.set(layout.projectDirectory.dir("jbr"))
                 projectPath.set(layout.projectDirectory.dir("mps-project"))
-                environments.register("Default")
+                environments.register("Default") { os.set(listOf(de.itemis.mps.envgen.OS.${os.name})) }
             }
             """.trimIndent()
         )
         GradleRunner.create().withProjectDir(projectDir).withPluginClasspath().withArguments("generateMpsEnvironment-Default").build()
-        return File(projectDir, ".mpsconfig/Default/" + EnvironmentGenerator.startScriptName(platform.os, "Default"))
+        return File(projectDir, ".mpsconfig/Default/" + EnvironmentGenerator.startScriptName(os, "Default"))
     }
 
     private data class Run(val exitCode: Int, val output: String)
 
-    private fun run(script: File): Run {
-        val process = ProcessBuilder(script.path).redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(File("/dev/null"))).start()
+    private fun run(script: File, environment: Map<String, String> = emptyMap()): Run {
+        val builder = ProcessBuilder(script.path).redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+        builder.environment().remove("IDE_JVM_ARGS")
+        builder.environment().putAll(environment)
+        val process = builder.start()
         val output = process.inputStream.bufferedReader().readText()
         check(process.waitFor(30, TimeUnit.SECONDS))
         return Run(process.exitValue(), output)
@@ -89,6 +92,34 @@ class StartScriptTest {
         )
         val result = run(generate())
         assertTrue("LAUNCHED native" in result.output, result.output)
+    }
+
+    // the macOS script is POSIX sh, so it runs on Linux as well; MPS home is the MPS path itself (no Contents/bin)
+    private val macOpens = listOf("sun.lwawt", "sun.lwawt.macosx", "com.apple.laf", "com.apple.eawt", "com.apple.eawt.event")
+        .joinToString(" ") { "--add-opens=java.desktop/$it=ALL-UNNAMED" }
+
+    @Test
+    fun `macOS script launcher gets the macOS packages opened`() {
+        fakeLauncher("bin/mps.sh", "script")
+        val result = run(generate(OS.MAC), mapOf("IDE_JVM_ARGS" to "-Dfrom.user=1"))
+        assertEquals(0, result.exitCode, result.output)
+        assertTrue("LAUNCHED script" in result.output, result.output)
+        // a value set by the user is kept in front
+        assertTrue("IDE_JVM_ARGS=-Dfrom.user=1 $macOpens\n" in result.output, result.output)
+        assertTrue("IDE_JVM_ARGS=\"-Dfrom.user=1 $macOpens\" \\" in result.output, result.output)
+    }
+
+    @Test
+    fun `macOS native launcher gets no extra packages`() {
+        fakeLauncher("bin/mps.sh", "script")
+        fakeLauncher("MacOS/mps", "native")
+        File(mpsDir, "Resources/product-info.json").apply { parentFile.mkdirs() }.writeText(
+            """{"launch":[{"os":"macOS","arch":"${platform.arch.mpsName}","launcherPath":"../MacOS/mps"}]}"""
+        )
+        val result = run(generate(OS.MAC))
+        assertEquals(0, result.exitCode, result.output)
+        assertTrue("LAUNCHED native" in result.output, result.output)
+        assertTrue("IDE_JVM_ARGS" !in result.output, result.output)
     }
 
     @Test

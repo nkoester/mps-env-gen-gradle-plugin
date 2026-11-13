@@ -175,9 +175,24 @@ if [ -n "${JAVA_HOME_CANDIDATE}" ] && [ -d "${JAVA_HOME_CANDIDATE}" ]; then
     export MPS_JDK
 fi
 
+# mps.sh of the generic MPS zip only opens the Linux UI packages (fixed when JetBrains builds the zip), so MPS fails
+# on macOS with "IllegalAccessException ... com.apple.laf.AquaLookAndFeel". mps.sh passes IDE_JVM_ARGS to java and
+# never sets it. List: macOS part of jetbrains.mps.ide.platform.OpenedPackages. The native launcher takes the
+# packages from product-info.json.
+case "${MPS_LAUNCHER}" in
+    *.sh)
+        macOpens="--add-opens=java.desktop/sun.lwawt=ALL-UNNAMED --add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED"
+        macOpens="${macOpens} --add-opens=java.desktop/com.apple.laf=ALL-UNNAMED --add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED"
+        macOpens="${macOpens} --add-opens=java.desktop/com.apple.eawt.event=ALL-UNNAMED"
+        IDE_JVM_ARGS="${IDE_JVM_ARGS:+${IDE_JVM_ARGS} }${macOpens}"
+        export IDE_JVM_ARGS
+        ;;
+esac
+
 # one part per line
 printf '\nCalling MPS:\n    MPS_PROPERTIES=%s \\\n    IDEA_VM_OPTIONS=%s \\\n    MPS_VM_OPTIONS=%s \\\n' \
     "${MPS_PROPERTIES}" "${IDEA_VM_OPTIONS}" "${MPS_VM_OPTIONS}"
 if [ -n "${MPS_JDK:-}" ]; then printf '    MPS_JDK=%s \\\n' "${MPS_JDK}"; fi
+if [ -n "${IDE_JVM_ARGS:-}" ]; then printf '    IDE_JVM_ARGS="%s" \\\n' "${IDE_JVM_ARGS}"; fi
 printf '    %s\n\n' "${MPS_PATH}/${MPS_LAUNCHER}"
 exec "${MPS_PATH}/${MPS_LAUNCHER}"
