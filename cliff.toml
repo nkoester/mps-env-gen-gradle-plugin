@@ -1,0 +1,50 @@
+# git-cliff (https://git-cliff.org): release notes from Conventional Commits
+#   CI:    release.yml, text of the GitHub release for a vX.Y.Z tag (commits since the previous vX.Y.Z tag)
+#   local: ./gradlew previewChangelog (commits since the last vX.Y.Z tag)
+
+[changelog]
+header = ""
+# the GitHub release has the tag as title, so no version heading here; breaking changes first, then the groups in
+# the order of their <!-- n --> prefix; group "hidden" (chore, ci, build, style, test, revert) is never shown
+body = """
+{%- set repo = "https://github.com/nkoester/mps-env-gen-gradle-plugin" -%}
+{%- set breaking = commits | filter(attribute="breaking", value=true) -%}
+{%- if breaking | length > 0 %}
+### Breaking changes
+{% for commit in breaking %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message }}
+{%- if commit.breaking_description and commit.breaking_description != commit.message %}: {{ commit.breaking_description }}{% endif %} ([{{ commit.id | truncate(length=7, end="") }}]({{ repo }}/commit/{{ commit.id }}))
+{%- endfor %}
+{% endif %}
+{%- for group, group_commits in commits | filter(attribute="breaking", value=false) | group_by(attribute="group") %}
+{%- if group != "<!-- 9 -->hidden" %}
+### {{ group | striptags | trim }}
+{% for commit in group_commits %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message }} ([{{ commit.id | truncate(length=7, end="") }}]({{ repo }}/commit/{{ commit.id }}))
+{%- endfor %}
+{% endif %}
+{%- endfor %}
+{%- if previous.version %}
+**Full changelog:** {{ repo }}/compare/{{ previous.version }}...{{ version | default(value="HEAD") }}
+{% endif %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+# merge commits, git's "Revert ..." and everything before Conventional Commits were adopted
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+commit_parsers = [
+    { message = "^feat", group = "<!-- 1 -->Features" },
+    { message = "^fix", group = "<!-- 2 -->Bug fixes" },
+    { message = "^perf", group = "<!-- 3 -->Performance" },
+    { message = "^refactor", group = "<!-- 4 -->Refactoring" },
+    { message = "^docs", group = "<!-- 5 -->Documentation" },
+    { message = ".*", group = "<!-- 9 -->hidden" },
+]
+# releases only: -SNAPSHOT and -rc tags are no boundaries, their commits belong to the next release
+tag_pattern = "^v?[0-9]+\\.[0-9]+\\.[0-9]+$"
+sort_commits = "oldest"

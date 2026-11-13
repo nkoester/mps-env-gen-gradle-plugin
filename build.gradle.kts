@@ -182,6 +182,37 @@ tasks.register<InstallGitHooks>("installGitHooks") {
     repository.set(layout.projectDirectory)
 }
 
+// prints the release notes the next vX.Y.Z tag would get (cliff.toml, same as release.yml); needs git-cliff on the PATH
+abstract class PreviewChangelog : DefaultTask() {
+    @get:Inject abstract val exec: ExecOperations
+    @get:Internal abstract val repository: DirectoryProperty
+
+    @TaskAction
+    fun preview() {
+        val names = listOf("git-cliff", "git-cliff.exe")
+        val onPath = System.getenv("PATH").orEmpty().split(File.pathSeparator)
+            .any { dir -> names.any { File(dir, it).canExecute() } }
+        if (!onPath) {
+            throw GradleException(
+                "git-cliff not found on the PATH. Install it, e.g. 'cargo install git-cliff', 'pipx install git-cliff', " +
+                    "'brew install git-cliff' or your distribution's package (https://git-cliff.org/docs/installation)."
+            )
+        }
+        exec.exec {
+            workingDir(repository)
+            commandLine("git-cliff", "--config", "cliff.toml", "--unreleased", "--strip", "all")
+        }
+    }
+}
+
+tasks.register<PreviewChangelog>("previewChangelog") {
+    group = "help"
+    description = "Prints the release notes of the next release (commits since the last vX.Y.Z tag); needs git-cliff."
+    repository.set(layout.projectDirectory)
+    notCompatibleWithConfigurationCache("prints the current git state on every run")
+    outputs.upToDateWhen { false }
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Release packaging
 //

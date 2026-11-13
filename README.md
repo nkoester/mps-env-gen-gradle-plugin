@@ -551,3 +551,16 @@ Format: `<type>[(<scope>)][!]: <description>`, e.g. `fix(core): open macOS packa
 
 CI checks every new commit with the same script (`.githooks/commit-msg`) and rejects `fixup!`/`squash!`/`amend!` commits.
 Test the script with `sh .githooks/test-commit-msg.sh`.
+
+## 6.2 Release notes
+
+The release workflow writes the text of each GitHub release with [git-cliff](https://git-cliff.org) (`cliff.toml`).
+It lists the commits since the previous `vX.Y.Z` tag: breaking changes first, then features, bug fixes, performance, refactoring and documentation.
+`chore`, `ci`, `build`, `style`, `test` and `revert` commits, merge commits and non-conventional commits are left out.
+`-SNAPSHOT` tags get no GitHub release, and their commits count towards the next release.
+
+Preview the notes of the next release (needs git-cliff on the `PATH`):
+
+```bash
+./gradlew previewChangelog
+```
