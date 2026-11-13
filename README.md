@@ -564,3 +564,22 @@ Preview the notes of the next release (needs git-cliff on the `PATH`); the previ
 ```bash
 ./gradlew previewChangelog
 ```
+
+## 6.3 Smoke test
+
+The smoke test starts MPS for real through a generated environment, which the unit tests (fake launchers) cannot.
+CI (`.github/workflows/smoke.yml`) runs it on Linux, macOS and Windows for MPS 2022.2.4 and 2026.1 on every push and pull request.
+
+Each run generates an environment with the CLI built from the repository, opens a copy of the sample project (`smoke-test/mps-2022.2`, `smoke-test/mps-2026.1`) and asks MPS to open a node via its node URL.
+It passes when MPS reports the node as opened, and fails fast on `Start Failed`, an exiting MPS or a node that cannot be found.
+
+Run it locally (Linux uses Xvfb, `SMOKE_SHOW=1` shows the window):
+
+```bash
+./gradlew :cli:installDist
+smoke-test/smoke.sh 2026.1 smoke-test/mps-2026.1
+smoke-test/smoke.sh 2022.2.4 smoke-test/mps-2022.2
+```
+
+On Windows: `pwsh smoke-test/smoke.ps1 2026.1 smoke-test/mps-2026.1`.
+Options (timeout, node reference, work folder) are listed at the top of `smoke-test/smoke.sh`.

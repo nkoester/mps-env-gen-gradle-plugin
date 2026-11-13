@@ -16,7 +16,7 @@ Read on demand, not up front. Start with the row matching the task.
 | Session state, working agreements          | `HANDOVER.md` (local; may be stale, check `git log`)                                        |
 | Build logic, versioning, release packaging | `build.gradle.kts` (root), `settings.gradle.kts` (maps `:core` etc. to `modules/<name>`)    |
 | Dependency versions                        | `gradle/libs.versions.toml`                                                                 |
-| CI / release                               | `.github/workflows/build.yaml`, `.github/workflows/release.yml`, `cliff.toml`               |
+| CI / release                               | `.github/workflows/{build.yaml,release.yml,smoke.yml}`, `cliff.toml`                        |
 | Commit message rules                       | `.githooks/commit-msg`, README "6.1 Commit messages"                                        |
 
 ## Code map
@@ -44,6 +44,8 @@ Read on demand, not up front. Start with the row matching the task.
 - Start scripts are executed against fake launchers in `StartScriptTest` (gradle-plugin) and `PluginStartScriptTest` (core);
   `.bat` files are only generated, never executed; macOS scripts run on Linux in tests
 - Hook script tests: `sh .githooks/test-commit-msg.sh`; release notes preview: `./gradlew previewChangelog` (needs git-cliff)
+- Real MPS start: `smoke-test/smoke.sh <version> smoke-test/mps-<series>` (README "6.3 Smoke test"); starts MPS, so only
+  run it when the user asks; CI runs it on 3 OS (`.github/workflows/smoke.yml`)
 - Configuration cache is on with `problems=fail`: new tasks must be compatible or declare otherwise
 
 ## Rules
