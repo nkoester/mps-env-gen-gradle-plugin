@@ -3,6 +3,7 @@ package de.itemis.mps.envgen.gradle
 import de.itemis.mps.envgen.CACHE_ENV
 import de.itemis.mps.envgen.FakeNexus
 import de.itemis.mps.envgen.OS
+import de.itemis.mps.envgen.distribution.JbrVersion
 import de.itemis.mps.envgen.distribution.MpsVersion
 import de.itemis.mps.envgen.distribution.Platform
 import de.itemis.mps.envgen.distribution.PreparedDistribution
@@ -57,6 +58,9 @@ class PrepareMpsFunctionalTest {
     private fun distribution(version: String) =
         File(cacheDir, "distributions/" + Platform.distributionDirName(MpsVersion.parse(version), platform.os))
 
+    /** prepared JBR next to it */
+    private fun jbrFolder(version: String) = File(cacheDir, "distributions/" + Platform.jbrDirName(JbrVersion.parse(version), platform))
+
     @BeforeEach
     fun setup() {
         nexus = FakeNexus(repoDir)
@@ -72,13 +76,15 @@ class PrepareMpsFunctionalTest {
 
         val result = runner("generateMpsEnvironment-Default").build()
         assertEquals(TaskOutcome.SUCCESS, result.task(":prepareMps-2026.1")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":prepareJbr-2026.1")?.outcome)
         assertEquals(TaskOutcome.SUCCESS, result.task(":generateMpsEnvironment-Default")?.outcome)
 
         val dist = distribution("2026.1")
         val home = File(dist, platform.homePath)
         assertTrue(File(home, platform.scriptLauncher).isFile)
         assertTrue(File(home, "lib/jna/libjnidispatch.so").isFile)
-        val java = File(home, "jbr/${platform.javaHome}/${platform.javaExecutable}")
+        assertFalse(File(home, "jbr").exists(), "the JBR has a folder of its own")
+        val java = File(jbrFolder("25.0.3-b329.124"), "${platform.javaHome}/${platform.javaExecutable}")
         assertTrue(java.isFile, "$java")
         if (platform.os != OS.WINDOWS) {
             assertTrue(java.canExecute(), "JBR file modes must be kept")
@@ -98,6 +104,36 @@ class PrepareMpsFunctionalTest {
         // second run: nothing is downloaded or unpacked again
         val second = runner("generateMpsEnvironment-Default").build()
         assertEquals(TaskOutcome.UP_TO_DATE, second.task(":prepareMps-2026.1")?.outcome)
+        assertEquals(TaskOutcome.UP_TO_DATE, second.task(":prepareJbr-2026.1")?.outcome)
+    }
+
+    @Test
+    fun `environments with different JBRs share one MPS and replace nothing`() {
+        nexus.mps("2026.1")
+        nexus.marker("2026.1", "25.0.3-b329.124")
+        nexus.jbr("25.0.3-b329.124", platform)
+        nexus.jbr("25.0.4-b330.1", platform)
+        buildFile("""    mpsVersion.set("2026.1")
+                environments.register("A")
+                environments.register("B") { jbrVersion.set("25.0.4-b330.1") }""")
+
+        val result = runner("generateMpsEnvironmentAll").build()
+        assertEquals(1, result.tasks.count { it.path.startsWith(":prepareMps-") })
+        assertEquals(TaskOutcome.SUCCESS, result.task(":prepareJbr-2026.1")?.outcome)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":prepareJbr-2026.1-25.0.4-b330.1")?.outcome)
+
+        val default = jbrFolder("25.0.3-b329.124")
+        val explicit = jbrFolder("25.0.4-b330.1")
+        assertTrue(File(default, PreparedDistribution.MARKER_FILE).isFile && File(explicit, PreparedDistribution.MARKER_FILE).isFile)
+        fun script(env: String) = File(projectDir, ".mpsconfig/$env/" + EnvironmentGenerator.startScriptName(platform.os, env)).readText()
+        assertTrue(default.path in script("A") && explicit.path !in script("A"), script("A"))
+        assertTrue(explicit.path in script("B"), script("B"))
+
+        // the other JBR again: both stay as they are
+        val prepared = File(distribution("2026.1"), PreparedDistribution.MARKER_FILE).lastModified()
+        runner("generateMpsEnvironment-A").build()
+        assertEquals(prepared, File(distribution("2026.1"), PreparedDistribution.MARKER_FILE).lastModified())
+        assertTrue(File(explicit, PreparedDistribution.MARKER_FILE).isFile)
     }
 
     @Test
@@ -256,6 +292,10 @@ class PrepareMpsFunctionalTest {
 
         val result = runner("tasks").buildAndFail()
         assertTrue("is reserved for prepared MPS distributions" in result.output, result.output)
+
+        buildFile("""    mpsVersion.set("2026.1")
+                environments.register("jbr-25.0.3-b329.124-linux-x64")""")
+        assertTrue("is reserved" in runner("tasks").buildAndFail().output)
     }
 
     @Test

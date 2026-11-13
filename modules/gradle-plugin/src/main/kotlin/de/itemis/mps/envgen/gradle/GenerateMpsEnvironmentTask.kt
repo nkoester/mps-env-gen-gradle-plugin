@@ -107,8 +107,13 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
     @get:Input
     abstract val missingMpsHint: Property<String>
 
+    /** printed by the start scripts if the JBR is missing, e.g. how to prepare it */
+    @get:Input
+    abstract val missingJavaHint: Property<String>
+
     init {
         missingMpsHint.convention("Check 'mpsPath' in your Gradle build.")
+        missingJavaHint.convention("Check 'javaHome' in your Gradle build.")
         overwriteSettings.convention(false)
         reinstallPlugins.convention(false)
         plugins.convention(emptyList())
@@ -144,6 +149,7 @@ abstract class GenerateMpsEnvironmentTask : DefaultTask() {
                 debugSuspend = debugSuspend.get(),
                 ideaProperties = ideaProperties.get(),
                 missingMpsHint = missingMpsHint.get(),
+                missingJavaHint = missingJavaHint.get(),
                 generatorVersion = GenerateMpsEnvironmentTask::class.java.getPackage().implementationVersion ?: "unknown",
                 plugins = plugins.get(),
                 pluginRestoreHint = "./gradlew $name",

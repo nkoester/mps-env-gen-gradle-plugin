@@ -48,9 +48,6 @@ class DistributionLayoutTest {
         "lib/jna/amd64/libjnidispatch.so", "lib/jna/aarch64/libjnidispatch.so", "lib/app.jar",
     ).also { File(it, "product-info.json").writeText(productInfo("Linux")) }
 
-    private fun jbr(home: File, platform: Platform) =
-        tree(File(home, "${Platform.JBR_DIR}/${platform.javaHome}"), platform.javaExecutable)
-
     @Test
     fun `strips a single top-level directory`() {
         val dir = tree(File(tmp, "x"), "MPS 2022.2/bin/mps.sh", "MPS 2022.2/lib/app.jar")
@@ -80,7 +77,6 @@ class DistributionLayoutTest {
         val platform = Platform.of(OS.LINUX, arch)
         val home = generic2026(File(tmp, "home"))
         DistributionLayout.applyLayout(home, platform)
-        jbr(home, platform)
 
         assertTrue(File(home, "bin/mps").isFile)
         assertTrue(File(home, "bin/restarter").isFile)
@@ -96,7 +92,6 @@ class DistributionLayoutTest {
         val platform = Platform.of(OS.WINDOWS, Arch.AMD64)
         val home = generic2026(File(tmp, "home"))
         DistributionLayout.applyLayout(home, platform)
-        jbr(home, platform)
 
         assertTrue(File(home, "bin/mps.bat").isFile)
         assertTrue(File(home, "bin/mps64.exe").isFile)
@@ -110,12 +105,10 @@ class DistributionLayoutTest {
         val platform = Platform.of(OS.MAC, arch)
         val home = generic2026(File(File(tmp, "dist"), platform.homePath))
         DistributionLayout.applyLayout(home, platform)
-        jbr(home, platform)
 
         assertEquals("bin/mac/Contents/MacOS/mps-${arch.macLauncherSuffix}", File(home, "MacOS/mps").readText())
         assertEquals("bin/mac/${arch.mpsName}/restarter", File(home, "bin/restarter").readText())
         assertTrue(File(home, "Info.plist").isFile)
-        assertTrue(File(home, "jbr/Contents/Home/bin/java").isFile)
         assertTrue(DistributionLayout.validate(home, platform).isValid)
         // descriptor of the generic zip is neither at Resources/ nor for macOS
         assertEquals(Launcher(Launcher.Kind.SCRIPT, "bin/mps.sh"), DistributionLayout.selectLauncher(home, platform))
@@ -134,7 +127,6 @@ class DistributionLayoutTest {
         val platform = Platform.of(OS.LINUX, Arch.AMD64)
         val home = generic2022(File(tmp, "home"))
         DistributionLayout.applyLayout(home, platform)
-        jbr(home, platform)
 
         assertTrue(File(home, "bin/restart.py").isFile)
         val result = DistributionLayout.validate(home, platform)
@@ -144,11 +136,13 @@ class DistributionLayoutTest {
     }
 
     @Test
-    fun `validation reports missing launcher and java`() {
+    fun `validation reports a missing launcher and, for the JBR, a missing java`() {
         val platform = Platform.of(OS.LINUX, Arch.AMD64)
         val result = DistributionLayout.validate(tree(File(tmp, "home"), "lib/app.jar"), platform)
         assertFalse(result.isValid)
-        assertEquals(2, result.errors.size)
+        assertEquals(listOf("Launcher bin/mps.sh is missing"), result.errors)
+        val jbr = DistributionLayout.validateJbr(tree(File(tmp, "jbr"), "lib/x.so"), platform)
+        assertEquals(listOf("Java executable bin/java is missing"), jbr.errors)
     }
 
     @Test

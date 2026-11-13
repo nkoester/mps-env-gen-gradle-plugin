@@ -21,6 +21,7 @@ import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.sources.PropertiesValueSource
 import de.itemis.mps.envgen.OS
+import de.itemis.mps.envgen.distribution.DistributionPreparer
 import de.itemis.mps.envgen.distribution.MpsVersion
 import de.itemis.mps.envgen.distribution.Platform
 import de.itemis.mps.envgen.environment.EnvironmentGenerator
@@ -141,7 +142,7 @@ abstract class EnvironmentCommand(name: String, protected val services: CliServi
 
     protected fun checkNewName(parent: File, name: String): File {
         if (name.isBlank() || name.contains('/') || name.contains('\\')) throw UsageError("Invalid environment name '$name'")
-        if (Platform.isReservedEnvironmentName(name)) throw UsageError("Environment name '$name' is reserved for prepared MPS distributions (mps-<version>-<OS>)")
+        if (Platform.isReservedEnvironmentName(name)) throw UsageError("Environment name '$name' is reserved for prepared MPS distributions (mps-<version>-<OS>, jbr-<version>-<classifier>)")
         val dir = File(parent, name)
         if (dir.exists()) throw failure("$dir exists already; use 'mps-env-gen refresh $dir' or another name")
         return dir
@@ -152,6 +153,11 @@ abstract class EnvironmentCommand(name: String, protected val services: CliServi
         missingMpsHint = when (spec.mpsOrigin) {
             MpsOrigin.NEXUS -> "Prepare it again via: mps-env-gen refresh ${spec.environmentDir}"
             else -> "Point the environment to another MPS via: mps-env-gen refresh ${spec.environmentDir} --mps <version|path>"
+        },
+        missingJavaHint = when {
+            spec.javaHome != null && DistributionPreparer.isPrepared(spec.javaHome!!) ->
+                "Prepare it again via: mps-env-gen refresh ${spec.environmentDir}"
+            else -> "Point the environment to another Java via: mps-env-gen refresh ${spec.environmentDir} --java-home <path>"
         },
         pluginRestoreHint = "mps-env-gen refresh ${spec.environmentDir}",
         generatorVersion = CliVersion.value,
@@ -238,7 +244,7 @@ class CreateCommand(services: CliServices) : EnvironmentCommand("create", servic
         val defaults = EnvironmentSpec(
             targetPath = parent, environmentName = envName, os = listOf(OS.current),
             mpsPath = resolved.home, javaHome = resolved.javaHome,
-            mpsOrigin = resolved.origin, mpsSource = resolved.source, jbrVersion = resolved.jbrVersion,
+            mpsOrigin = resolved.origin, mpsSource = resolved.source, jbrVersion = resolved.jbrVersion, jbrExplicit = resolved.jbrExplicit,
             debugPort = Ports.DEBUG_BASE, missingMpsHint = "", generatorVersion = CliVersion.value, plugins = plugins,
         )
         val (spec, _) = settings.applyTo(defaults, Ports.usedBySiblings(parent), reallocatePorts = true)
@@ -382,13 +388,17 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
         val mpsWasInTarget = stored.spec.mpsPath.absoluteFile.normalize().startsWith(stored.spec.targetPath.absoluteFile.normalize())
         val resolver = MpsResolver(source, services, ::info, ::verbose, ::warn)
 
+        // a JBR chosen by the user is kept, a default one follows the MPS version
+        val explicitJbr = source.jbrVersion ?: spec.jbrVersion?.takeIf { spec.jbrExplicit }
         spec = when {
-            mps != null -> spec.withMps(resolver.resolve(mps!!, spec.targetPath))
+            mps != null -> spec.withMps(resolver.resolve(mps!!, spec.targetPath, explicitJbr))
             spec.mpsOrigin == MpsOrigin.NEXUS -> {
-                val prepared = resolver.prepared(MpsVersion.parse(spec.mpsSource), spec.targetPath, inTarget = source.mpsInTarget || mpsWasInTarget)
-                // a JBR of the distribution is replaced, an explicitly chosen one kept
-                val javaHome = spec.javaHome?.takeUnless { it.absoluteFile.startsWith(prepared.root.absoluteFile) } ?: prepared.javaHome
-                spec.copy(mpsPath = prepared.home, javaHome = javaHome, jbrVersion = prepared.jbrVersion.toString())
+                val inTarget = source.mpsInTarget || mpsWasInTarget
+                val prepared = resolver.prepared(MpsVersion.parse(spec.mpsSource), spec.targetPath, inTarget)
+                val jbr = resolver.jbr(prepared, spec.targetPath, explicitJbr, inTarget)
+                // a prepared JBR is replaced, a Java home of the user kept
+                val javaHome = spec.javaHome?.takeUnless { DistributionPreparer.isPrepared(it) } ?: jbr.javaHome
+                spec.copy(mpsPath = prepared.home, javaHome = javaHome, jbrVersion = jbr.version.toString(), jbrExplicit = explicitJbr != null)
             }
             else -> spec.also { if (!it.mpsPath.isDirectory) warn("MPS ${it.mpsPath} does not exist; use --mps to point to another one") }
         }
@@ -401,9 +411,10 @@ class RefreshCommand(services: CliServices) : EnvironmentCommand("refresh", serv
     }
 }
 
+/** a prepared JBR is replaced (or dropped for an MPS without one); a Java home of the user is kept */
 private fun EnvironmentSpec.withMps(resolved: ResolvedMps) = copy(
-    mpsPath = resolved.home, javaHome = resolved.javaHome ?: javaHome.takeIf { resolved.origin != MpsOrigin.NEXUS },
-    mpsOrigin = resolved.origin, mpsSource = resolved.source, jbrVersion = resolved.jbrVersion,
+    mpsPath = resolved.home, javaHome = resolved.javaHome ?: javaHome?.takeUnless { DistributionPreparer.isPrepared(it) },
+    mpsOrigin = resolved.origin, mpsSource = resolved.source, jbrVersion = resolved.jbrVersion, jbrExplicit = resolved.jbrExplicit,
 )
 
 /** lock files of IntelliJ in the config and system folders (`port.lock` since 2020.x, `.lock` before); they stay after exit */

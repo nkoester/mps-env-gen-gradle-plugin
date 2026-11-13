@@ -25,7 +25,7 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
 
         extension.environments.configureEach {
             if (Platform.isReservedEnvironmentName(name)) {
-                throw GradleException("Environment name '$name' is reserved for prepared MPS distributions (mps-<version>-<OS>).")
+                throw GradleException("Environment name '$name' is reserved for prepared MPS distributions (mps-<version>-<OS>, jbr-<version>-<classifier>).")
             }
             // mpsPath/mpsVersion have no conventions: an environment's version must win over a default path
             jbrVersion.convention(extension.jbrVersion)
@@ -56,10 +56,13 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
             generateAll.configure { dependsOn(task) }
         }
 
-        // prepare tasks are per MPS version, which is only known once the build script ran
+        // prepare tasks are per MPS version and JBR, which are only known once the build script ran
         project.afterEvaluate {
             extension.environments.forEach { environment ->
-                (mpsSource(environment, extension) as? MpsSource.Version)?.let { distributions.forVersion(it.version) }
+                (mpsSource(environment, extension) as? MpsSource.Version)?.let {
+                    distributions.forVersion(it.version)
+                    distributions.jbrFor(it.version, environment.jbrVersion.orNull)
+                }
             }
         }
     }
@@ -72,8 +75,9 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
     ): TaskProvider<GenerateMpsEnvironmentTask> {
         val taskName = "generateMpsEnvironment-" + environment.name.replaceFirstChar { it.uppercase() }
         val source = project.provider { mpsSource(environment, extension) }
-        val prepare: Provider<PrepareMpsDistributionTask> =
-            source.flatMap { (it as? MpsSource.Version)?.let { v -> distributions.named(v.version) } ?: project.provider { null } }
+        val jbr: Provider<PrepareJbrTask> = source.flatMap { s ->
+            (s as? MpsSource.Version)?.let { v -> distributions.jbrNamed(v.version, environment.jbrVersion.orNull) } ?: project.provider { null }
+        }
 
         return project.tasks.register(taskName, GenerateMpsEnvironmentTask::class.java) {
             group = "mps"
@@ -87,10 +91,20 @@ class MpsEnvironmentGenerationPlugin : Plugin<Project> {
                     is MpsSource.Version -> distributions.named(s.version).flatMap { it.mpsHome }
                 }
             })
-            javaHome.set(environment.javaHome.orElse(prepare.flatMap { it.javaHome }))
-            dependsOn(source.map { s -> if (s is MpsSource.Version) listOf<Any>(distributions.named(s.version)) else emptyList() })
+            javaHome.set(environment.javaHome.orElse(jbr.flatMap { it.javaHome }))
+            dependsOn(source.map { s ->
+                if (s is MpsSource.Version) listOf<Any>(distributions.named(s.version), distributions.jbrNamed(s.version, environment.jbrVersion.orNull))
+                else emptyList()
+            })
             missingMpsHint.set(source.map { s ->
                 if (s is MpsSource.Version) "Prepare it via: ./gradlew ${distributions.taskName(s.version)}" else "Check 'mpsPath' in your Gradle build."
+            })
+            missingJavaHint.set(source.map { s ->
+                if (s is MpsSource.Version && !environment.javaHome.isPresent) {
+                    "Prepare it via: ./gradlew ${distributions.jbrTaskName(s.version, environment.jbrVersion.orNull)}"
+                } else {
+                    "Check 'javaHome' in your Gradle build."
+                }
             })
 
             os.set(environment.os)

@@ -56,6 +56,8 @@ data class EnvironmentSpec(
     val ideaProperties: List<String> = emptyList(),
     /** printed by the start scripts if MPS is missing */
     val missingMpsHint: String,
+    /** printed by the start scripts if [javaHome] is missing, e.g. a prepared JBR removed with the cache */
+    val missingJavaHint: String = "Regenerate the environment or point it to another JBR.",
     /** version of the generating tool, written into the generated files */
     val generatorVersion: String,
     /** how [mpsPath] was obtained; recorded so the environment can be refreshed without the original arguments */
@@ -63,6 +65,8 @@ data class EnvironmentSpec(
     /** MPS version or path as given by the user */
     val mpsSource: String = mpsPath.toString(),
     val jbrVersion: String? = null,
+    /** [jbrVersion] was chosen by the user and is kept on refresh; otherwise the default JBR of the MPS version is used */
+    val jbrExplicit: Boolean = false,
     /** plugins installed into the plugins folder of the environment */
     val plugins: List<PluginDeclaration> = emptyList(),
     /** printed by the start scripts if a managed plugin folder is missing: how to regenerate the environment */
@@ -484,6 +488,7 @@ class EnvironmentGenerator(
                         "JAVA_HOME" to (spec.javaHome?.toString() ?: ""),
                         "ENVIRONMENT_NAME" to spec.environmentName,
                         "MISSING_MPS_HINT" to spec.missingMpsHint,
+                        "MISSING_JAVA_HINT" to spec.missingJavaHint,
                         "HTTP_PORT" to (spec.httpPort?.toString() ?: ""),
                         "HTTP_PORT_BASE" to "${Ports.HTTP_BASE}",
                         // debugging can also be enabled per start with -d, so the port is always set
@@ -503,7 +508,7 @@ class EnvironmentGenerator(
         MAC(Constants.MPS_RUN_SCRIPT_MAC_FILENAME, Constants.MPS_RUN_SCRIPT_MAC_TEMPLATE_PATH, { _, v -> escapeShell(v) }),
         // the hint is the only value in an unquoted ECHO line; all others are inside quotes
         WINDOWS(Constants.MPS_RUN_SCRIPT_WIN_FILENAME, Constants.MPS_RUN_SCRIPT_WIN_TEMPLATE_PATH,
-            { k, v -> if (k == "MISSING_MPS_HINT") escapeBatchEcho(v) else escapeBatchQuoted(v) }),
+            { k, v -> if (k == "MISSING_MPS_HINT" || k == "MISSING_JAVA_HINT") escapeBatchEcho(v) else escapeBatchQuoted(v) }),
     }
 
     /** replaces `REPLACE_ME__<key>`; [values] are escaped for the script language, [comments] are not */

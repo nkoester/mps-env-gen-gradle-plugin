@@ -33,6 +33,15 @@ ECHO REPLACE_ME__MISSING_MPS_HINT
 PAUSE
 EXIT /B 1
 :mpsFound
+:: without it MPS would start on whatever Java it finds
+IF "%JAVA_HOME_CANDIDATE%"=="" GOTO :javaFound
+IF EXIST "%JAVA_HOME_CANDIDATE%\bin\java.exe" GOTO :javaFound
+ECHO ERROR: Java (JBR) not found at
+ECHO     %JAVA_HOME_CANDIDATE%
+ECHO REPLACE_ME__MISSING_JAVA_HINT
+PAUSE
+EXIT /B 1
+:javaFound
 
 :: plugins installed by mps-env-gen (written at generation) and the others found in the plugins folder; MPS is not
 :: started if a plugin port is busy

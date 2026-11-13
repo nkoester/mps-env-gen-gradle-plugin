@@ -53,6 +53,7 @@ object EnvironmentMetadata {
         set("mps.source", spec.mpsSource)
         set("mps.path", spec.mpsPath)
         set("jbr.version", spec.jbrVersion)
+        if (spec.jbrExplicit) set("jbr.explicit", true)
         set("javaHome", spec.javaHome)
         set("project", spec.projectPath)
         set("os", spec.os.joinToString(","))
@@ -114,6 +115,7 @@ object EnvironmentMetadata {
             mpsOrigin = get("mps.origin")?.let { runCatching { MpsOrigin.valueOf(it) }.getOrNull() } ?: template.mpsOrigin,
             mpsSource = get("mps.source") ?: template.mpsSource,
             jbrVersion = get("jbr.version"),
+            jbrExplicit = get("jbr.explicit")?.toBoolean() ?: false,
         )
         val plugins = readPlugins(props, file.parentFile)
         return StoredEnvironment(spec.copy(plugins = plugins.map { it.declaration }), get("created"), get("refreshed"), list("history"), plugins)

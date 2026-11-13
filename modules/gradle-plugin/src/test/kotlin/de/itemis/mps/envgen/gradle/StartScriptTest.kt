@@ -127,6 +127,19 @@ class StartScriptTest {
     }
 
     @Test
+    fun `refuses to start without its JBR`() {
+        for (os in listOf(platform.os, OS.MAC)) {
+            fakeLauncher(platform.scriptLauncher, "script")
+            val script = generate(os)
+            jbrDir.deleteRecursively()
+            val result = run(script)
+            assertEquals(1, result.exitCode, result.output)
+            assertTrue("Java (JBR) not found" in result.output && "Check 'javaHome'" in result.output, result.output)
+            assertTrue("LAUNCHED" !in result.output, result.output)
+        }
+    }
+
+    @Test
     fun `explains a missing MPS installation`() {
         val script = generate()
         val result = run(script)

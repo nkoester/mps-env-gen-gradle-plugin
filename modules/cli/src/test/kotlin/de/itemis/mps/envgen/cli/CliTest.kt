@@ -419,6 +419,37 @@ class CommandsTest {
     }
 
     @Test
+    fun `the JBR has a folder of its own, an explicit one is kept and a local MPS drops it`() {
+        nexus.jbr("25.0.4-b330.1", platform)
+        val dists = File(tmp, "cache/distributions")
+        val mpsDist = File(dists, Platform.distributionDirName(MpsVersion.parse("2026.1"), platform.os))
+        val defaultJbr = File(dists, Platform.jbrDirName(JbrVersion.parse("25.0.3-b329.124"), platform))
+        val explicitJbr = File(dists, Platform.jbrDirName(JbrVersion.parse("25.0.4-b330.1"), platform))
+
+        run("create", "2026.1", "--name", "a")
+        assertFalse(File(mpsDist, "${platform.homePath}/jbr").exists())
+        assertEquals("25.0.3-b329.124", props(env("a")).getProperty("jbr.version"))
+        assertNull(props(env("a")).getProperty("jbr.explicit"))
+        assertTrue(defaultJbr.path in props(env("a")).getProperty("javaHome"))
+
+        val prepared = File(mpsDist, PreparedDistribution.MARKER_FILE).lastModified()
+        run("create", "2026.1", "--name", "b", "--jbr-version", "25.0.4b330.1")
+        assertEquals("25.0.4-b330.1", props(env("b")).getProperty("jbr.version"))
+        assertEquals("true", props(env("b")).getProperty("jbr.explicit"))
+        assertTrue(explicitJbr.path in props(env("b")).getProperty("javaHome"))
+        assertEquals(prepared, File(mpsDist, PreparedDistribution.MARKER_FILE).lastModified(), "one MPS for both")
+        assertTrue(File(defaultJbr, PreparedDistribution.MARKER_FILE).isFile, "nothing is replaced")
+
+        run("refresh", env("b").path)
+        assertTrue(explicitJbr.path in props(env("b")).getProperty("javaHome"), "an explicit JBR is kept")
+
+        val local = File(tmp, "local-mps").apply { File(this, "bin").mkdirs(); File(this, "bin/mps.sh").writeText("") }
+        run("refresh", env("a").path, "--mps", local.path)
+        assertNull(props(env("a")).getProperty("javaHome"), "a prepared JBR does not belong to another MPS")
+        assertNull(props(env("a")).getProperty("jbr.version"))
+    }
+
+    @Test
     fun `refresh keeps user changes, follows moves and re-prepares MPS`() {
         run("create", "2026.1", "--name", "a")
         val laf = File(env("a"), "mps/config/options/laf.xml").apply { writeText("user") }

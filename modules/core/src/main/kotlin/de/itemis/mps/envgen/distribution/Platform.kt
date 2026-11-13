@@ -28,7 +28,7 @@ enum class Arch(
 
 /**
  * All OS specific knowledge needed to assemble and launch a runnable MPS. Paths are relative to the MPS home,
- * except [homePath] (relative to the distribution root) and [javaHome] (relative to the JBR root).
+ * except [homePath] (relative to the distribution root) and [javaHome] (relative to the root of a prepared JBR).
  */
 data class Platform(
     val os: OS,
@@ -56,8 +56,6 @@ data class Platform(
         }
 
     companion object {
-        const val JBR_DIR = "jbr"
-
         val current: Platform
             get() = of(OS.current, Arch.current)
 
@@ -105,11 +103,15 @@ data class Platform(
         const val DISTRIBUTION_DIR_PREFIX = "mps-"
 
         private val DISTRIBUTION_DIR = Regex("""mps-\d{4}\.\d+.*-(LINUX|MAC|WINDOWS)""")
+        private val JBR_DIR_NAME = Regex("""jbr-\d+.*-(linux|osx|windows)-(x64|aarch64)""")
 
-        /** folder name of a prepared distribution inside the target path, e.g. `mps-2025.1.4-LINUX` */
+        /** folder name of a prepared MPS (without JBR) inside the target path, e.g. `mps-2025.1.4-LINUX` */
         fun distributionDirName(mpsVersion: MpsVersion, os: OS): String = "$DISTRIBUTION_DIR_PREFIX$mpsVersion-${os.name}"
 
-        /** names of prepared distributions (`mps-<version>-<OS>`), which no environment may use */
-        fun isReservedEnvironmentName(name: String): Boolean = DISTRIBUTION_DIR.matches(name)
+        /** folder name of a prepared JBR next to the prepared MPS distributions, e.g. `jbr-21.0.8-b1163.69-linux-x64` */
+        fun jbrDirName(version: JbrVersion, platform: Platform): String = "jbr-$version-${platform.jbrClassifier}"
+
+        /** names of prepared distributions (`mps-<version>-<OS>`, `jbr-<version>-<classifier>`), which no environment may use */
+        fun isReservedEnvironmentName(name: String): Boolean = DISTRIBUTION_DIR.matches(name) || JBR_DIR_NAME.matches(name)
     }
 }

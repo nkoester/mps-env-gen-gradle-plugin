@@ -78,6 +78,9 @@ class EnvironmentMaintenanceTest {
         assertTrue(Platform.isReservedEnvironmentName("mps-2026.1-RC1-MAC"))
         assertFalse(Platform.isReservedEnvironmentName("MPS-2026.1"))
         assertFalse(Platform.isReservedEnvironmentName("mps-dev"))
+        assertTrue(Platform.isReservedEnvironmentName("jbr-25.0.3-b329.124-linux-x64"))
+        assertTrue(Platform.isReservedEnvironmentName("jbr-21.0.8-b1163.69-osx-aarch64"))
+        assertFalse(Platform.isReservedEnvironmentName("jbr-test"))
     }
 
     /** runs the Linux start script of [spec] against a fake MPS printing its vmoptions */

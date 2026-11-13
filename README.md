@@ -59,8 +59,9 @@ Tasks (group `mps`):
 
 - `generateMpsEnvironment-default`: writes `.mpsconfig/default` including its start script `.mpsconfig/default/startMPS_LINUX_default.sh`
 - `generateMpsEnvironmentAll`: generates all environments
-- `prepareMps-<version>`: downloads MPS and a matching JBR from Nexus and prepares a runnable MPS in the shared cache folder (see "5.1 Downloaded MPS and cache folder").
-  It runs automatically when needed.
+- `prepareMps-<version>`: downloads MPS from Nexus and prepares a runnable MPS in the shared cache folder (see "5.1 Downloaded MPS and cache folder").
+- `prepareJbr-<version>`: downloads the matching JBR of that MPS version and unpacks it next to it; `prepareJbr-<version>-<jbrVersion>` for an environment with its own `jbrVersion`.
+  Both run automatically when needed.
 
 After `./gradlew generateMpsEnvironment-default` (Linux host):
 
@@ -111,7 +112,7 @@ mpsEnvironments {
     // defaults for all environments
     mpsVersion.set("2025.1.4")                                  // MPS 2022.2+ from Nexus
     projectPath.set(layout.projectDirectory.dir("mps-project"))  // optional: trusted and opened on first start
-    // also: mpsPath, jbrVersion, javaHome, targetPath (default .mpsconfig),
+    // also: mpsPath, jbrVersion (also per environment), javaHome, targetPath (default .mpsconfig),
     //       mpsInTargetPath (prepare MPS in targetPath instead of the shared cache folder)
 
     environments {
@@ -396,18 +397,24 @@ Existing environments keep their settings files; to apply a changed default, see
 Every environment needs a runnable MPS.
 With a given path or an installations folder, the available MPS is used and nothing is downloaded.
 When just providing a version, any MPS from 2022.2 on is usable and will be downloaded automatically.
-The itemis Nexus provides MPS only as the OS-independent zip without a Java runtime, so the tool also downloads the matching JetBrains Runtime (`jbr_jcef` for the host OS and architecture) and assembles both into a runnable MPS, `mps-<version>-<OS>`.
+The itemis Nexus provides MPS only as the OS-independent zip without a Java runtime, so the tool also downloads the matching JetBrains Runtime (`jbr_jcef` for the host OS and architecture).
+It prepares both in folders of their own: the MPS in `mps-<version>-<OS>`, the JBR in `jbr-<jbrVersion>-<os>-<arch>` (e.g. `jbr-25.0.3-b329.124-linux-x64`).
+The start scripts run MPS on that JBR (`MPS_JDK`) and refuse to start if it is missing.
+
+- the JBR is derived from the MPS version (default) or set with `jbrVersion` (Gradle, also per environment) or `--jbr-version` (CLI)
+- environments with different JBRs share one MPS; several MPS versions with the same JBR share one JBR
+- `refresh` keeps a JBR set with `--jbr-version`, and follows the MPS version otherwise
 
 ### 5.1.1 Locations
 
 When downloaded, the tool puts the MPS in:
 
-|               | Downloaded archives                                                       | Prepared MPS (`mps-<version>-<OS>`) |
-| ------------- | ------------------------------------------------------------------------- | ----------------------------------- |
-| Gradle plugin | Gradle's dependency cache (`~/.gradle/caches`), which the build uses also | `<cache>/distributions/`            |
-| CLI           | `<cache>/downloads/`                                                      | `<cache>/distributions/`            |
+|               | Downloaded archives                                                       | Prepared MPS and JBR (`mps-*`, `jbr-*`) |
+| ------------- | ------------------------------------------------------------------------- | --------------------------------------- |
+| Gradle plugin | Gradle's dependency cache (`~/.gradle/caches`), which the build uses also | `<cache>/distributions/`                |
+| CLI           | `<cache>/downloads/`                                                      | `<cache>/distributions/`                |
 
-One prepared MPS per version is shared by all environments, projects, the CLI and the Gradle plugin.
+One prepared MPS per version and one prepared JBR per version are shared by all environments, projects, the CLI and the Gradle plugin.
 This saves about 1.5 GB per version and checkout, keeps throw-away environments small, and survives `git clean -xdf`.
 
 The default cache dir can be overwritten via `cache-dir` or set to be next to the environments via `mpsInTargetPath.set(true)`.
@@ -421,9 +428,10 @@ The default cache dir can be overwritten via `cache-dir` or set to be next to th
 | Windows | `%LOCALAPPDATA%\mps-env-gen\cache`                              |
 
 - `MPS_ENV_GEN_CACHE` sets another folder for the CLI and the Gradle plugin, the CLI also has `--cache-dir`
-- a prepared MPS takes about ~1.5 GB per version, plus its downloaded archives
-- a prepared MPS that matches is reused and never replaced, as MPS may be running from it
-- the folder can be deleted at any time: archives are downloaded again when needed, and `mps-env-gen refresh <env>` or `./gradlew generateMpsEnvironment-<Name>` prepares a missing MPS again
+- a prepared MPS takes about ~1.5 GB per version, a prepared JBR about 400 MB, plus their downloaded archives
+- a prepared MPS or JBR is reused and never replaced, as MPS may be running from it; only an interrupted preparation is cleaned up
+- unused `mps-*` and `jbr-*` folders are not removed automatically
+- the folder can be deleted at any time: archives are downloaded again when needed, and `mps-env-gen refresh <env>` or `./gradlew generateMpsEnvironment-<Name>` prepares a missing MPS or JBR again
 
 ## 5.2 Start scripts
 

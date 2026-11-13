@@ -17,6 +17,7 @@ MPS_PATH="REPLACE_ME__MPS_PATH"
 MPS_LAUNCHER="REPLACE_ME__MPS_LAUNCHER"
 JAVA_HOME_CANDIDATE="REPLACE_ME__JAVA_HOME"
 MISSING_MPS_HINT="REPLACE_ME__MISSING_MPS_HINT"
+MISSING_JAVA_HINT="REPLACE_ME__MISSING_JAVA_HINT"
 DEBUG_ENABLED="REPLACE_ME__DEBUG_ENABLED"
 DEBUG_PORT="REPLACE_ME__DEBUG_PORT"
 DEBUG_SUSPEND="REPLACE_ME__DEBUG_SUSPEND"
@@ -66,6 +67,11 @@ testPaths() {
 testMps() {
     if [ ! -f "${MPS_PATH}/${MPS_LAUNCHER}" ]; then
         printf "ERROR: MPS not found at\n    %s\n%s\n" "${MPS_PATH}/${MPS_LAUNCHER}" "${MISSING_MPS_HINT}" >&2
+        exit 1
+    fi
+    # without it MPS would start on whatever Java it finds
+    if [ -n "${JAVA_HOME_CANDIDATE}" ] && [ ! -d "${JAVA_HOME_CANDIDATE}" ]; then
+        printf "ERROR: Java (JBR) not found at\n    %s\n%s\n" "${JAVA_HOME_CANDIDATE}" "${MISSING_JAVA_HINT}" >&2
         exit 1
     fi
 }

@@ -12,7 +12,7 @@ data class ValidationResult(val errors: List<String>, val warnings: List<String>
 }
 
 /**
- * Turns an unpacked generic MPS zip (as published on Nexus) plus an unpacked JBR into a runnable MPS.
+ * Turns an unpacked generic MPS zip (as published on Nexus) into a runnable MPS and checks an unpacked JBR.
  * Operates on directories only; unpacking is up to the caller.
  */
 object DistributionLayout {
@@ -70,15 +70,15 @@ object DistributionLayout {
         }
     }
 
-    fun javaHome(home: File, platform: Platform): File = File(home, "${Platform.JBR_DIR}/${platform.javaHome}").normalize()
+    /** java home inside a prepared JBR folder */
+    fun javaHome(jbrRoot: File, platform: Platform): File = File(jbrRoot, platform.javaHome).normalize()
 
+    /** checks an MPS home; the JBR is prepared and checked separately ([validateJbr]) */
     fun validate(home: File, platform: Platform): ValidationResult {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
         if (!File(home, platform.scriptLauncher).isFile) errors += "Launcher ${platform.scriptLauncher} is missing"
-        val java = File(javaHome(home, platform), platform.javaExecutable)
-        if (!java.isFile) errors += "Java executable ${java.relativeTo(home)} is missing"
 
         // MPS 2022.2 ships no lib/jna; JNA then extracts its native library from the jar
         val jna = File(home, "lib/jna")
@@ -86,6 +86,11 @@ object DistributionLayout {
             warnings += "No JNA native library in lib/jna; JNA falls back to the library inside its jar"
         }
         return ValidationResult(errors, warnings)
+    }
+
+    fun validateJbr(jbrRoot: File, platform: Platform): ValidationResult {
+        val java = File(javaHome(jbrRoot, platform), platform.javaExecutable)
+        return ValidationResult(if (java.isFile) emptyList() else listOf("Java executable ${java.relativeTo(jbrRoot)} is missing"), emptyList())
     }
 
     /**
