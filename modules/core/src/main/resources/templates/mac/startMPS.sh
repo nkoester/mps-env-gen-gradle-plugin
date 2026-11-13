@@ -177,14 +177,17 @@ fi
 
 # mps.sh of the generic MPS zip only opens the Linux UI packages (fixed when JetBrains builds the zip), so MPS fails
 # on macOS with "IllegalAccessException ... com.apple.laf.AquaLookAndFeel". mps.sh passes IDE_JVM_ARGS to java and
-# never sets it. List: macOS part of jetbrains.mps.ide.platform.OpenedPackages. The native launcher takes the
-# packages from product-info.json.
+# never sets it; it splits it with IFS=newline+tab (not spaces), so one option per line.
+# List: macOS part of jetbrains.mps.ide.platform.OpenedPackages. The native launcher takes the packages from
+# product-info.json.
 case "${MPS_LAUNCHER}" in
     *.sh)
-        macOpens="--add-opens=java.desktop/sun.lwawt=ALL-UNNAMED --add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED"
-        macOpens="${macOpens} --add-opens=java.desktop/com.apple.laf=ALL-UNNAMED --add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED"
-        macOpens="${macOpens} --add-opens=java.desktop/com.apple.eawt.event=ALL-UNNAMED"
-        IDE_JVM_ARGS="${IDE_JVM_ARGS:+${IDE_JVM_ARGS} }${macOpens}"
+        nl='
+'
+        macOpens="--add-opens=java.desktop/sun.lwawt=ALL-UNNAMED${nl}--add-opens=java.desktop/sun.lwawt.macosx=ALL-UNNAMED"
+        macOpens="${macOpens}${nl}--add-opens=java.desktop/com.apple.laf=ALL-UNNAMED${nl}--add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED"
+        macOpens="${macOpens}${nl}--add-opens=java.desktop/com.apple.eawt.event=ALL-UNNAMED"
+        IDE_JVM_ARGS="${IDE_JVM_ARGS:+${IDE_JVM_ARGS}${nl}}${macOpens}"
         export IDE_JVM_ARGS
         ;;
 esac

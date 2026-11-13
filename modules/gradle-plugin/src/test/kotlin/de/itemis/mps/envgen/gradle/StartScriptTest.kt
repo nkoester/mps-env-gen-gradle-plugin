@@ -30,7 +30,11 @@ class StartScriptTest {
     private fun fakeLauncher(relative: String, name: String) =
         File(mpsDir, relative).apply {
             parentFile.mkdirs()
-            writeText("#!/bin/sh\necho \"LAUNCHED $name\"\nenv | grep -E '^(MPS_|IDEA_VM|IDE_JVM_ARGS)' | sort\n")
+            // IDE_JVM_ARGS split as mps.sh does before calling java: IFS is newline and tab, not space
+            writeText(
+                "#!/bin/sh\necho \"LAUNCHED $name\"\nenv | grep -E '^(MPS_|IDEA_VM)' | sort\n" +
+                    "IFS=\"\$(printf '\\n\\t')\"\nfor arg in \${IDE_JVM_ARGS-}; do echo \"JVM_ARG[\${arg}]\"; done\n"
+            )
             setExecutable(true)
         }
 
@@ -96,7 +100,7 @@ class StartScriptTest {
 
     // the macOS script is POSIX sh, so it runs on Linux as well; MPS home is the MPS path itself (no Contents/bin)
     private val macOpens = listOf("sun.lwawt", "sun.lwawt.macosx", "com.apple.laf", "com.apple.eawt", "com.apple.eawt.event")
-        .joinToString(" ") { "--add-opens=java.desktop/$it=ALL-UNNAMED" }
+        .map { "--add-opens=java.desktop/$it=ALL-UNNAMED" }
 
     @Test
     fun `macOS script launcher gets the macOS packages opened`() {
@@ -104,9 +108,9 @@ class StartScriptTest {
         val result = run(generate(OS.MAC), mapOf("IDE_JVM_ARGS" to "-Dfrom.user=1"))
         assertEquals(0, result.exitCode, result.output)
         assertTrue("LAUNCHED script" in result.output, result.output)
-        // a value set by the user is kept in front
-        assertTrue("IDE_JVM_ARGS=-Dfrom.user=1 $macOpens\n" in result.output, result.output)
-        assertTrue("IDE_JVM_ARGS=\"-Dfrom.user=1 $macOpens\" \\" in result.output, result.output)
+        // java gets every option as an argument of its own, a value set by the user first
+        val args = Regex("""JVM_ARG\[(.*)]""").findAll(result.output).map { it.groupValues[1] }.toList()
+        assertEquals(listOf("-Dfrom.user=1") + macOpens, args, result.output)
     }
 
     @Test
@@ -119,7 +123,7 @@ class StartScriptTest {
         val result = run(generate(OS.MAC))
         assertEquals(0, result.exitCode, result.output)
         assertTrue("LAUNCHED native" in result.output, result.output)
-        assertTrue("IDE_JVM_ARGS" !in result.output, result.output)
+        assertTrue("IDE_JVM_ARGS" !in result.output && "JVM_ARG[" !in result.output, result.output)
     }
 
     @Test
