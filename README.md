@@ -327,7 +327,7 @@ Fixed, without an option (change them in MPS, or with `vmOptions` / `--vm-option
 
 - no tips on startup, no "what's new" page, new UI onboarding counted as seen
 - a given project is trusted and opened on first start
-- no "import settings" dialog, no data sharing consent dialog, no freeze reports, no usage statistics
+- no "import settings" dialog, no user agreement and data sharing consent dialogs, no freeze reports, no usage statistics
 
 Existing environments keep their settings files; to apply a changed default, see "5.4 Changes to generated environments".
 
@@ -495,6 +495,7 @@ The reasons are the assumptions behind them, taken over and not re-verified for 
 | `-Dperformance.watcher.freeze.report=false`, `-Dfreeze.reporter.enabled=false`                       | no freeze reports                                                                                                                                                                     |
 | `-Didea.suppress.statistics.report=true`, `-Didea.disable.collect.statistics=true`                   | no usage statistics (telemetry), regardless of the machine-wide consent in `~/.local/share/JetBrains/consentOptions`. MPS sends nothing and, from 2023.3 on, does not collect either. |
 | `-Djb.consents.confirmation.enabled=false`                                                           | no data sharing consent dialog on first start; without it MPS waits for an answer on machines that never gave one (new machines, CI)                                                  |
+| `-Djb.privacy.policy.text=<!--999.999-->`                                                            | no JetBrains user agreement dialog on first start: 999.999 counts as accepted. On Windows with `mps.bat` the start script passes it via `JAVA_TOOL_OPTIONS` (cmd would read `<` and `>` as redirections) |
 | `-Djava.net.preferIPv4Stack=true`                                                                    | node URLs and debugging on `127.0.0.1`                                                                                                                                                |
 | `-Dawt.useSystemAAFontSettings=lcd`, `-Dsun.java2d.renderer=sun.java2d.marlin.MarlinRenderingEngine` | font antialiasing and renderer as in mps-zookeeper (Linux desktops)                                                                                                                   |
 | `-Didea.log.config.file=log.xml`                                                                     | log configuration as in mps-zookeeper. MPS 2022.3+ ships `log.properties` instead, the effect there is unverified.                                                                    |

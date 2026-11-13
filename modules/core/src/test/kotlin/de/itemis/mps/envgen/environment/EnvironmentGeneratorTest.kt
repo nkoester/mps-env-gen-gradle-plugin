@@ -47,6 +47,20 @@ class EnvironmentGeneratorTest {
     }
 
     @Test
+    fun `no consent or user agreement dialog blocks the first start`() {
+        val spec = spec()
+        EnvironmentGenerator().generate(spec)
+        val vmoptions = File(spec.mpsConfigDir, "mps64.vmoptions").readLines()
+        assertTrue("-Djb.consents.confirmation.enabled=false" in vmoptions, vmoptions.toString())
+        // 999.999 is EndUserAgreement.MAGIC_VERSION, which always counts as accepted
+        assertTrue("-Djb.privacy.policy.text=<!--999.999-->" in vmoptions, vmoptions.toString())
+        // mps.bat would read "<" and ">" as redirections: the Windows script moves the option to JAVA_TOOL_OPTIONS
+        val bat = File(spec.environmentDir, "startMPS_WINDOWS_Default.bat").readText()
+        assertTrue("""/C:"-Djb.privacy.policy.text=" """ in bat, bat)
+        assertTrue("""SET "JAVA_TOOL_OPTIONS=%JAVA_TOOL_OPTIONS% -Djb.privacy.policy.text=<!--999.999-->"""" in bat, bat)
+    }
+
+    @Test
     fun `the folder of the environments ignores itself in git`() {
         val spec = spec()
         EnvironmentGenerator().generate(spec)

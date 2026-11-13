@@ -69,16 +69,25 @@ findstr /V /C:"-Dide.httpsupport.internalPort=" "%VM_OPTIONS_FILE%" > "%VM_OPTIO
 MOVE /Y "%VM_OPTIONS_FILE%.tmp" "%VM_OPTIONS_FILE%" >NUL
 ECHO Node URL port: %NODE_PORT% (%NODE_PORT_ORIGIN%)  http://127.0.0.1:%NODE_PORT%/node
 
-:: debugging is decided here (configured or -d); only then MPS starts from a copy with the jdwp line on a free port,
+:: debugging is decided here (configured or -d); then MPS starts from a copy with the jdwp line on a free port,
 :: otherwise directly from mps64.vmoptions, so "Edit Custom VM Options" in MPS edits that file
 SET "DEBUG_PORT_FREE="
 IF /I "%DEBUG_ENABLED%"=="true" CALL :firstFreePort %DEBUG_PORT% DEBUG_PORT_FREE
 IF /I "%DEBUG_ENABLED%"=="true" IF NOT DEFINED DEBUG_PORT_FREE ECHO WARNING: no free debug port from %DEBUG_PORT%, starting MPS without debugging
 SET "JDWP_ACTIVE="
 findstr /B /C:"-agentlib:jdwp=" "%VM_OPTIONS_FILE%" >NUL && SET "JDWP_ACTIVE=1"
-IF NOT DEFINED DEBUG_PORT_FREE IF NOT DEFINED JDWP_ACTIVE GOTO :vmOptionsSelected
+:: mps.bat collects the vmoptions lines into an unquoted variable, where cmd takes the "<" and ">" of
+:: -Djb.privacy.policy.text=<!--999.999--> as redirections: for mps.bat that line goes into JAVA_TOOL_OPTIONS instead
+SET "POLICY_ACTIVE="
+IF /I "%MPS_LAUNCHER:~-4%"==".bat" findstr /B /C:"-Djb.privacy.policy.text=" "%VM_OPTIONS_FILE%" >NUL && SET "POLICY_ACTIVE=1"
+IF NOT DEFINED DEBUG_PORT_FREE IF NOT DEFINED JDWP_ACTIVE IF NOT DEFINED POLICY_ACTIVE GOTO :vmOptionsSelected
 SET "VM_OPTIONS_FILE=%CONFIG_MPS_PATH%\mps64.runtime.vmoptions"
-findstr /V /C:"-agentlib:jdwp" "%CONFIG_MPS_PATH%\mps64.vmoptions" > "%VM_OPTIONS_FILE%"
+IF DEFINED POLICY_ACTIVE (
+    findstr /V /C:"-agentlib:jdwp" /C:"-Djb.privacy.policy.text=" "%CONFIG_MPS_PATH%\mps64.vmoptions" > "%VM_OPTIONS_FILE%"
+    SET "JAVA_TOOL_OPTIONS=%JAVA_TOOL_OPTIONS% -Djb.privacy.policy.text=<!--999.999-->"
+) ELSE (
+    findstr /V /C:"-agentlib:jdwp" "%CONFIG_MPS_PATH%\mps64.vmoptions" > "%VM_OPTIONS_FILE%"
+)
 IF DEFINED DEBUG_PORT_FREE >>"%VM_OPTIONS_FILE%" ECHO -agentlib:jdwp=transport=dt_socket,server=y,suspend=%DEBUG_SUSPEND%,address=127.0.0.1:%DEBUG_PORT_FREE%
 IF DEFINED DEBUG_PORT_FREE ECHO Debug port:    %DEBUG_PORT_FREE%
 :vmOptionsSelected
@@ -96,6 +105,7 @@ ECHO     MPS_PROPERTIES=%MPS_PROPERTIES%
 ECHO     IDEA_VM_OPTIONS=%IDEA_VM_OPTIONS%
 ECHO     MPS_VM_OPTIONS=%MPS_VM_OPTIONS%
 IF DEFINED MPS_JDK ECHO     MPS_JDK=%MPS_JDK%
+IF DEFINED POLICY_ACTIVE ECHO     JAVA_TOOL_OPTIONS (appended)= -Djb.privacy.policy.text=^<!--999.999--^>
 ECHO     %MPS_PATH%\%MPS_LAUNCHER%
 ECHO.
 ::----------------------------------------------------------------------

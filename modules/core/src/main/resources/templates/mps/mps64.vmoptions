@@ -48,6 +48,8 @@
 -Didea.disable.collect.statistics=true
 #No data sharing consent dialog on machines that never answered it (stored outside the environment, it blocks the first start)
 -Djb.consents.confirmation.enabled=false
+#No JetBrains user agreement dialog on machines that never accepted it (stored outside the environment); 999.999 counts as accepted
+-Djb.privacy.policy.text=<!--999.999-->
 #Port for opening nodes from URLs (http://127.0.0.1:<port>/node); the start script moves it to a free one
 -Dide.httpsupport.internalPort=REPLACE_ME__HTTP_PORT
 REPLACE_ME__DEBUGENABLE-agentlib:jdwp=transport=dt_socket,server=y,suspend=REPLACE_ME__SUSPEND,address=127.0.0.1:REPLACE_ME__DEBUGPORT
