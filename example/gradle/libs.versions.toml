@@ -1,5 +1,5 @@
 [versions]
-mpsEnvGen = "0.1.0"
+mpsEnvGen = "0.1.2"
 mps = "2026.1"
 mpsExtensions = "2026.1.3712.45fabf4"
 
