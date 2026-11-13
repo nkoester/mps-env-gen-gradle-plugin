@@ -13,7 +13,7 @@
 # or "has not been found" (not ready yet, retried every 2s; each try shows a popup in MPS; 15 times "not found" fail)
 #
 # environment:
-#   SMOKE_TIMEOUT   seconds until MPS must be up (default 300)
+#   SMOKE_TIMEOUT   seconds until MPS must be up (default 120)
 #   SMOKE_NODE_REF  URL-encoded node reference to open (default: the root node of smoketest.sandbox in both samples)
 #   SMOKE_SHOW=1    Linux: use the current display instead of an Xvfb display
 # when MPS is still running at a failure: thread dumps in the start output, Linux also screenshot.png (ImageMagick)
@@ -27,7 +27,7 @@ version="${1:?usage: smoke.sh <mps-version> [<project-dir>]}"
 project="${2:-}"
 repo="$(cd "$(dirname "$0")/.." && pwd -P)"
 cli="${MPS_ENV_GEN:-${repo}/modules/cli/build/install/mps-env-gen/bin/mps-env-gen}"
-timeout="${SMOKE_TIMEOUT:-300}"
+timeout="${SMOKE_TIMEOUT:-120}"
 node_ref="${SMOKE_NODE_REF:-r%3Ab8dc92cc-9342-4627-878b-8909a6ba5364%28smoketest.sandbox%29%2F7901695510806614122}"
 work="${SMOKE_WORK:-$(mktemp -d "${TMPDIR:-/tmp}/mps-smoke.XXXXXX")}"
 name="smoke"

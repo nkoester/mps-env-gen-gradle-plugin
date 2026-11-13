@@ -60,7 +60,7 @@ jobs:
     name: MPS ${{ matrix.mps }} on ${{ matrix.os }}
     needs: prepare
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:

@@ -15,7 +15,7 @@ param(
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path "$PSScriptRoot/..").Path
 $cli = if ($env:MPS_ENV_GEN) { $env:MPS_ENV_GEN } else { "$repo\modules\cli\build\install\mps-env-gen\bin\mps-env-gen.bat" }
-$timeout = if ($env:SMOKE_TIMEOUT) { [int]$env:SMOKE_TIMEOUT } else { 300 }
+$timeout = if ($env:SMOKE_TIMEOUT) { [int]$env:SMOKE_TIMEOUT } else { 120 }
 # pass criterion and SMOKE_NODE_REF: see smoke.sh
 $nodeRef = if ($env:SMOKE_NODE_REF) { $env:SMOKE_NODE_REF } else { "r%3Ab8dc92cc-9342-4627-878b-8909a6ba5364%28smoketest.sandbox%29%2F7901695510806614122" }
 $work = if ($env:SMOKE_WORK) { $env:SMOKE_WORK } else { Join-Path ([IO.Path]::GetTempPath()) ("mps-smoke-" + [guid]::NewGuid().ToString("N").Substring(0, 8)) }
@@ -24,6 +24,8 @@ $envDir = "$work\envs\$name"
 $output = "$work\start-output.txt"
 $log = "$envDir\mps\log\idea.log"
 $summary = $env:GITHUB_STEP_SUMMARY
+
+function Step([string]$text) { Write-Host ("[{0:HH:mm:ss}] {1}" -f (Get-Date), $text) }
 
 if (-not (Test-Path $cli)) { Write-Error "CLI not found at $cli; run ./gradlew :cli:installDist" }
 if ($Project -and -not (Test-Path $Project -PathType Container)) {
@@ -47,6 +49,7 @@ Write-Host "Generating: $cli $($create -join ' ')"
 Push-Location $work
 try { & $cli @create; $created = $LASTEXITCODE } finally { Pop-Location }
 if ($created -ne 0) { Write-Host "FAIL: environment generation failed"; exit 1 }
+Step "environment generated"
 $script = "$envDir\startMPS_WINDOWS_$name.bat"
 if (-not (Test-Path $script)) { Write-Host "FAIL: start script $script missing"; exit 1 }
 
@@ -54,8 +57,12 @@ if (-not (Test-Path $script)) { Write-Host "FAIL: start script $script missing";
 $empty = "$work\empty-input.txt"
 Set-Content -Path $empty -Value "" -NoNewline
 $started = Get-Date
-Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "`"$script`"" -RedirectStandardOutput $output `
-    -RedirectStandardError "$work\start-error.txt" -RedirectStandardInput $empty -NoNewWindow -Wait
+Step "running $script"
+# not -Wait: it also waits for all descendants, and MPS (started by the .bat with "start") is one of them
+$launch = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "`"$script`"" -RedirectStandardOutput $output `
+    -RedirectStandardError "$work\start-error.txt" -RedirectStandardInput $empty -NoNewWindow -PassThru
+if (-not $launch.WaitForExit(30000)) { Write-Host "FAIL: the start script did not finish within 30s"; Get-Content $output; exit 1 }
+Step "start script finished (exit code $($launch.ExitCode))"
 Get-Content $output
 
 function Get-MpsProcesses {
@@ -91,6 +98,7 @@ function Fail([string]$reason) {
 # 3. watch: fail fast, pass as soon as MPS opens the node
 $port = (Select-String -Path $output -Pattern "^Node URL port: (\d+)" | Select-Object -First 1).Matches.Groups[1].Value
 if (-not $port) { Fail "the start script printed no node URL port" }
+Step "waiting for MPS on node URL port $port"
 $answer = "no answer"
 $notFound = 0
 $seenProcess = $false
