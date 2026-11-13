@@ -1,0 +1,75 @@
+#!/bin/sh
+#
+# Checks a commit message against Conventional Commits 1.0.0 (https://www.conventionalcommits.org/en/v1.0.0/)
+# and the rules of this repository.
+#
+# usage: commit-msg <message file>
+#   git hook: enable once per clone with ./gradlew installGitHooks (or: git config core.hooksPath .githooks)
+#   CI:       COMMIT_MSG_STRICT=1 also rejects fixup!/squash!/amend! commits
+#
+# header: <type>[(<scope>)][!]: <description>
+#   - at most 72 characters
+#   - description starts lowercase and has no trailing dot
+#   - a body is separated by a blank line
+# accepted as written by git: "Merge ...", "Revert \"...\"", "fixup! ", "squash! ", "amend! " (not in strict mode)
+
+TYPES="feat fix docs style refactor perf test build ci chore revert"
+SCOPES="core cli gradle-plugin example docs ci build"
+MAX_HEADER=72
+
+file="$1"
+if [ -z "${file}" ] || [ ! -r "${file}" ]; then
+    printf 'usage: %s <commit message file>\n' "$0" >&2
+    exit 2
+fi
+
+fail() {
+    printf 'Invalid commit message: %s\n' "$1" >&2
+    printf '  header: %s\n' "${header}" >&2
+    printf '  format: <type>[(<scope>)][!]: <description>, e.g. "fix(core): open macOS packages for mps.sh"\n' >&2
+    printf '  types:  %s\n' "${TYPES}" >&2
+    printf '  scopes: %s (optional)\n' "${SCOPES}" >&2
+    exit 1
+}
+
+# what git keeps: no comment lines, nothing below the scissors line, no leading blank lines
+message="$(sed -e '/^# -\{8,\} >8 -\{8,\}$/,$d' -e '/^#/d' "${file}" | sed -e '/./,$!d')"
+header="$(printf '%s\n' "${message}" | sed -n '1p')"
+second="$(printf '%s\n' "${message}" | sed -n '2p')"
+
+[ -n "${header}" ] || fail "empty message"
+
+case "${header}" in
+    "Merge "*|"Revert \""*)
+        exit 0
+        ;;
+    "fixup! "*|"squash! "*|"amend! "*)
+        [ "${COMMIT_MSG_STRICT:-0}" = 1 ] && fail "fixup!/squash!/amend! commits must be squashed before merging"
+        exit 0
+        ;;
+esac
+
+prefix="${header%%: *}"
+description="${header#*: }"
+[ "${prefix}" != "${header}" ] || fail "missing ': ' after the type"
+
+type="${prefix%!}"
+type="${type%%(*}"
+case " ${TYPES} " in *" ${type} "*) ;; *) fail "unknown type '${type}'" ;; esac
+
+rest="${prefix#"${type}"}"
+rest="${rest%!}"
+if [ -n "${rest}" ]; then
+    case "${rest}" in
+        "("*")") scope="${rest#(}"; scope="${scope%)}" ;;
+        *) fail "malformed scope '${rest}'" ;;
+    esac
+    case " ${SCOPES} " in *" ${scope} "*) ;; *) fail "unknown scope '${scope}'" ;; esac
+fi
+
+[ -n "${description}" ] && [ "${description}" = "${description# }" ] || fail "empty description or more than one space after ':'"
+case "${description}" in [A-Z]*) fail "description must start lowercase" ;; esac
+case "${description}" in *.) fail "description must not end with a dot" ;; esac
+[ "$(printf '%s' "${header}" | wc -m)" -le "${MAX_HEADER}" ] || fail "header longer than ${MAX_HEADER} characters"
+[ -z "${second}" ] || fail "blank line required between header and body"
+exit 0

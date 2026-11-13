@@ -529,3 +529,25 @@ chmod a-w ~/.config/JetBrains
 ```
 
 Warning: This also affects other JetBrains IDEs (e.g. IntelliJ IDEA), which then need an isolated configuration too.
+
+# 6. Development
+
+## 6.1 Commit messages
+
+Commit messages follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/).
+Enable the check once per clone (safe to run again):
+
+```bash
+./gradlew installGitHooks        # same as: git config core.hooksPath .githooks
+```
+
+Format: `<type>[(<scope>)][!]: <description>`, e.g. `fix(core): open macOS packages for mps.sh`.
+
+- types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- scopes (optional): `core`, `cli`, `gradle-plugin`, `example`, `docs`, `ci`, `build`
+- header at most 72 characters, description starts lowercase without a trailing dot
+- a body follows after a blank line; breaking changes get `!` or a `BREAKING CHANGE:` footer
+- git's own `Merge ...`, `Revert "..."` and `fixup!`/`squash!`/`amend!` messages pass locally
+
+CI checks every new commit with the same script (`.githooks/commit-msg`) and rejects `fixup!`/`squash!`/`amend!` commits.
+Test the script with `sh .githooks/test-commit-msg.sh`.

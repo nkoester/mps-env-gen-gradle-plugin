@@ -143,6 +143,45 @@ tasks.register("buildNativeCli") {
     dependsOn(":cli:nativeCompile")
 }
 
+// enables .githooks/commit-msg (Conventional Commits) for this clone; only changes this repository's git config,
+// never run by other tasks; safe to run again
+abstract class InstallGitHooks : DefaultTask() {
+    @get:Inject abstract val exec: ExecOperations
+    @get:Internal abstract val repository: DirectoryProperty
+
+    @TaskAction
+    fun install() {
+        val previous = java.io.ByteArrayOutputStream()
+        exec.exec {
+            workingDir(repository)
+            commandLine("git", "config", "--local", "--get", "core.hooksPath")
+            standardOutput = previous
+            isIgnoreExitValue = true
+        }
+        val old = previous.toString().trim()
+        if (old == HOOKS_PATH) {
+            logger.lifecycle("Git hooks already enabled (core.hooksPath=$HOOKS_PATH)")
+            return
+        }
+        exec.exec {
+            workingDir(repository)
+            commandLine("git", "config", "--local", "core.hooksPath", HOOKS_PATH)
+        }
+        if (old.isNotEmpty()) logger.warn("Replaced core.hooksPath=$old")
+        logger.lifecycle("Git hooks enabled (core.hooksPath=$HOOKS_PATH)")
+    }
+
+    companion object {
+        const val HOOKS_PATH = ".githooks"
+    }
+}
+
+tasks.register<InstallGitHooks>("installGitHooks") {
+    group = "help"
+    description = "Enables the commit message check (Conventional Commits) for this clone: git config core.hooksPath .githooks."
+    repository.set(layout.projectDirectory)
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Release packaging
 //

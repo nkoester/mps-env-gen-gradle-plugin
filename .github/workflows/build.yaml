@@ -12,6 +12,32 @@ permissions:
   contents: read
 
 jobs:
+  # Conventional Commits, see .githooks/commit-msg; older commits are not checked
+  commit-messages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FIRST_UNCHECKED: 5d5879f
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Test the commit message check
+        run: sh .githooks/test-commit-msg.sh
+
+      - name: Check commit messages
+        run: |
+          failed=0
+          for commit in $(git rev-list --no-merges "$FIRST_UNCHECKED..HEAD"); do
+            git log -1 --format=%B "$commit" > "$RUNNER_TEMP/message"
+            if ! COMMIT_MSG_STRICT=1 sh .githooks/commit-msg "$RUNNER_TEMP/message"; then
+              echo "::error::Commit $(git rev-parse --short "$commit") has an invalid message"
+              failed=1
+            fi
+          done
+          exit "$failed"
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
