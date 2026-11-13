@@ -178,6 +178,42 @@ Layout:
 
 Without installing: `./gradlew buildCli`, then `java -jar modules/cli/build/libs/mps-env-gen-<version>-all.jar`.
 
+### 2.1.1 macOS
+
+Install a Java 11+ (e.g. `brew install openjdk@17`), then:
+
+```bash
+./gradlew installCli                                              # ~/.local/bin/mps-env-gen
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc           # ~/.local/bin is not on the macOS PATH
+echo 'autoload -Uz compinit && compinit' >> ~/.zshrc              # skip if your ~/.zshrc already has it
+echo 'source <(mps-env-gen completion zsh)' >> ~/.zshrc           # zsh is the default shell on macOS
+```
+
+Open a new terminal and check with `mps-env-gen --version`.
+
+### 2.1.2 Windows
+
+Install a Java 11+, then in PowerShell:
+
+```powershell
+.\gradlew.bat installCli                                          # %USERPROFILE%\.local\bin\mps-env-gen.bat
+[Environment]::SetEnvironmentVariable("Path", "$env:USERPROFILE\.local\bin;" + [Environment]::GetEnvironmentVariable("Path", "User"), "User")
+```
+
+Open a new terminal and check with `mps-env-gen --version`.
+`installCli` writes a `mps-env-gen.bat` wrapper instead of a symlink (symlinks need admin rights or developer mode).
+There is no PowerShell completion; `mps-env-gen completion` supports bash, zsh and fish only.
+`installNativeCli` probably needs the Visual Studio Build Tools for GraalVM's native-image (untested); the JVM install above does not.
+
+### 2.1.3 From a release download (any OS, no build)
+
+Each GitHub release has the JVM distribution `mps-env-gen-<version>.zip` and the runnable jar `mps-env-gen-<version>-all.jar` (Java 11+ for both):
+
+- unzip `mps-env-gen-<version>.zip` and add its `mps-env-gen-<version>/bin` folder to the `PATH` (it contains `mps-env-gen` and `mps-env-gen.bat`)
+- or run the jar directly: `java -jar mps-env-gen-<version>-all.jar create 2026.1 --temp`
+
+The macOS and Windows steps above have not been run on those systems yet; the CI smoke test (see "6.3 Smoke test") uses the CLI from `./gradlew :cli:installDist` instead.
+
 ## 2.2 Use
 
 Create a throw-away environment in `$TMPDIR/mps-env-gen/2025.1.4-<date>-<time>`.
@@ -292,7 +328,18 @@ Settings stored in files that MPS also edits (heap, theme, model check, update c
 
 ## 3.1 CLI defaults file and environment variables
 
-Defaults for `create`: `~/.config/mps-env-gen/defaults.properties` (or `$XDG_CONFIG_HOME/mps-env-gen/`, or the file in `MPS_ENV_GEN_CONFIG`).
+Defaults for `create` come from `defaults.properties`; `mps-env-gen init-defaults` writes it to the location below.
+The same `~/.config` folder is used on every OS:
+
+| OS      | File                                                         |
+|---------|--------------------------------------------------------------|
+| Linux   | `~/.config/mps-env-gen/defaults.properties`                  |
+| macOS   | `/Users/<name>/.config/mps-env-gen/defaults.properties`      |
+| Windows | `C:\Users\<name>\.config\mps-env-gen\defaults.properties`    |
+
+`$XDG_CONFIG_HOME/mps-env-gen/defaults.properties` replaces `~/.config/...` if `XDG_CONFIG_HOME` is set; a file named in `MPS_ENV_GEN_CONFIG` replaces both.
+On Windows, write paths in the file with `/` or `\\` (`installs=C:/mps`): a single `\` is an escape character in `.properties` files.
+
 Keys are the long option names without `--`:
 
 ```properties
