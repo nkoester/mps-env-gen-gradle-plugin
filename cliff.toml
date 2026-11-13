@@ -5,9 +5,11 @@
 [changelog]
 header = ""
 # the GitHub release has the tag as title, so no version heading here; breaking changes first, then the groups in
-# the order of their <!-- n --> prefix; group "hidden" (chore, ci, build, style, test, revert) is never shown
+# the order of their <!-- n --> prefix; group "Other" (chore, ci, build, style, test, revert) is only shown with
+# CLIFF_SHOW_ALL=1 (previewChangelog), never in GitHub releases
 body = """
 {%- set repo = "https://github.com/nkoester/mps-env-gen-gradle-plugin" -%}
+{%- set show_all = get_env(name="CLIFF_SHOW_ALL", default="0") == "1" -%}
 {%- set breaking = commits | filter(attribute="breaking", value=true) -%}
 {%- if breaking | length > 0 %}
 ### Breaking changes
@@ -17,10 +19,10 @@ body = """
 {%- endfor %}
 {% endif %}
 {%- for group, group_commits in commits | filter(attribute="breaking", value=false) | group_by(attribute="group") %}
-{%- if group != "<!-- 9 -->hidden" %}
+{%- if group != "<!-- 9 -->Other" or show_all %}
 ### {{ group | striptags | trim }}
 {% for commit in group_commits %}
-- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message }} ([{{ commit.id | truncate(length=7, end="") }}]({{ repo }}/commit/{{ commit.id }}))
+- {% if group == "<!-- 9 -->Other" %}{{ commit.raw_message | split(pat="\n") | first }}{% else %}{% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message }}{% endif %} ([{{ commit.id | truncate(length=7, end="") }}]({{ repo }}/commit/{{ commit.id }}))
 {%- endfor %}
 {% endif %}
 {%- endfor %}
@@ -43,7 +45,7 @@ commit_parsers = [
     { message = "^perf", group = "<!-- 3 -->Performance" },
     { message = "^refactor", group = "<!-- 4 -->Refactoring" },
     { message = "^docs", group = "<!-- 5 -->Documentation" },
-    { message = ".*", group = "<!-- 9 -->hidden" },
+    { message = ".*", group = "<!-- 9 -->Other" },
 ]
 # releases only: -SNAPSHOT and -rc tags are no boundaries, their commits belong to the next release
 tag_pattern = "^v?[0-9]+\\.[0-9]+\\.[0-9]+$"

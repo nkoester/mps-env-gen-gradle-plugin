@@ -182,7 +182,8 @@ tasks.register<InstallGitHooks>("installGitHooks") {
     repository.set(layout.projectDirectory)
 }
 
-// prints the release notes the next vX.Y.Z tag would get (cliff.toml, same as release.yml); needs git-cliff on the PATH
+// prints the release notes of the next vX.Y.Z tag (cliff.toml, as in release.yml) plus the "Other" group (chore, ci,
+// ...), which GitHub releases hide; needs git-cliff on the PATH
 abstract class PreviewChangelog : DefaultTask() {
     @get:Inject abstract val exec: ExecOperations
     @get:Internal abstract val repository: DirectoryProperty
@@ -201,15 +202,15 @@ abstract class PreviewChangelog : DefaultTask() {
         exec.exec {
             workingDir(repository)
             commandLine("git-cliff", "--config", "cliff.toml", "--unreleased", "--strip", "all")
+            environment("CLIFF_SHOW_ALL", "1")
         }
     }
 }
 
 tasks.register<PreviewChangelog>("previewChangelog") {
     group = "help"
-    description = "Prints the release notes of the next release (commits since the last vX.Y.Z tag); needs git-cliff."
+    description = "Prints the release notes of the next release incl. hidden commit types (since the last vX.Y.Z tag); needs git-cliff."
     repository.set(layout.projectDirectory)
-    notCompatibleWithConfigurationCache("prints the current git state on every run")
     outputs.upToDateWhen { false }
 }
 

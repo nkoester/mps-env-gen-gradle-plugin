@@ -559,7 +559,7 @@ It lists the commits since the previous `vX.Y.Z` tag: breaking changes first, th
 `chore`, `ci`, `build`, `style`, `test` and `revert` commits, merge commits and non-conventional commits are left out.
 `-SNAPSHOT` tags get no GitHub release, and their commits count towards the next release.
 
-Preview the notes of the next release (needs git-cliff on the `PATH`):
+Preview the notes of the next release (needs git-cliff on the `PATH`); the preview also lists the hidden types in an "Other" section:
 
 ```bash
 ./gradlew previewChangelog
