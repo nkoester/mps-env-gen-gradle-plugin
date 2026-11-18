@@ -105,8 +105,8 @@ enum class EnvironmentPart {
     PROJECT,
     /** `generationSettings.xml` */
     MODEL_CHECK,
-    /** `ide.general.xml` */
-    TIPS,
+    /** `ide.general.xml` (no tips on startup; status bar widgets Git branch, memory, power save) */
+    GENERAL,
     /** `other.xml` (new UI onboarding and "what's new" seen) */
     ONBOARDING,
     /** `updates.xml` (no "what's new", update checks) */
@@ -125,7 +125,7 @@ enum class EnvironmentPart {
          * written only if missing; afterwards they belong to the user (MPS settings, hand edits) and are rewritten
          * only on explicit request
          */
-        val USER_OWNED: Set<EnvironmentPart> = setOf(VM_OPTIONS, IDEA_PROPERTIES, THEME, PROJECT, MODEL_CHECK, TIPS, ONBOARDING, UPDATES, NOTIFICATIONS, PROJECT_VIEW)
+        val USER_OWNED: Set<EnvironmentPart> = setOf(VM_OPTIONS, IDEA_PROPERTIES, THEME, PROJECT, MODEL_CHECK, GENERAL, ONBOARDING, UPDATES, NOTIFICATIONS, PROJECT_VIEW)
     }
 }
 
@@ -381,8 +381,8 @@ class EnvironmentGenerator(
             }
         }
 
-        // disable tips on startup
-        files.write(EnvironmentPart.TIPS, File(options, "ide.general.xml")) { readTemplate("$templates/ide.general.xml") }
+        // no tips on startup; Git branch, memory indicator and power save toggle in the status bar
+        files.write(EnvironmentPart.GENERAL, File(options, "ide.general.xml")) { readTemplate("$templates/ide.general.xml") }
 
         // no popup asking to install the MPS merge driver (group "MergeDriver" of VCS Addons); still logged
         files.write(EnvironmentPart.NOTIFICATIONS, File(options, "notifications.xml")) {

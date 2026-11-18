@@ -57,13 +57,14 @@ Once Gradle configured the project, the following Gradle tasks are generated:
 
 Tasks (group `mps`):
 
-- `generateMpsEnvironment-default`: writes `.mpsconfig/default` including its start script `.mpsconfig/default/startMPS_LINUX_default.sh`
+- `generateMpsEnvironment-Default`: writes `.mpsconfig/default` including its start script `.mpsconfig/default/startMPS_LINUX_default.sh`.
+  Task names start the environment name with a capital letter; folders and scripts keep it as registered.
 - `generateMpsEnvironmentAll`: generates all environments
 - `prepareMps-<version>`: downloads MPS from Nexus and prepares a runnable MPS in the shared cache folder (see "5.1 Downloaded MPS and cache folder").
 - `prepareJbr-<version>`: downloads the matching JBR of that MPS version and unpacks it next to it; `prepareJbr-<version>-<jbrVersion>` for an environment with its own `jbrVersion`.
   Both run automatically when needed.
 
-After `./gradlew generateMpsEnvironment-default` (Linux host):
+After `./gradlew generateMpsEnvironment-Default` (Linux host):
 
 ```
 .mpsconfig
@@ -376,6 +377,7 @@ Fixed, without an option (change them in MPS, or with `vmOptions` / `--vm-option
 - no tips on startup, no "what's new" page, new UI onboarding counted as seen
 - a given project is trusted and opened on first start
 - no "import settings" dialog, no user agreement and data sharing consent dialogs, no freeze reports, no usage statistics
+- status bar shows Git branch, memory indicator and power save mode toggle (new UI: Git branch also in the main toolbar)
 
 Existing environments keep their settings files; to apply a changed default, see "5.4 Changes to generated environments".
 

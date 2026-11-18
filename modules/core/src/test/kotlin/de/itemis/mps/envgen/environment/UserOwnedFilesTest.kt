@@ -105,6 +105,18 @@ class UserOwnedFilesTest {
     }
 
     @Test
+    fun `status bar shows git branch, memory and power save widgets`() {
+        val spec = spec()
+        generator().generate(spec)
+        val general = File(options(spec), "ide.general.xml").readText()
+        assertTrue("<component name=\"StatusBar\">" in general, general)
+        listOf("Memory", "PowerSaveMode", "git").forEach {
+            assertTrue("<entry key=\"$it\" value=\"true\" />" in general, "$it in $general")
+        }
+        assertTrue("<option name=\"showTipsOnStartup\" value=\"false\" />" in general, general)
+    }
+
+    @Test
     fun `idea properties keep user lines but follow the location`() {
         val spec = spec()
         generator().generate(spec)
